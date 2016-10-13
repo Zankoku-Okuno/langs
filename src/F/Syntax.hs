@@ -49,6 +49,11 @@ pattern ArrTy a b <- (TCon (isArr -> True) [a, b])
     where
     ArrTy a b = TCon mkArr [a, b]
 
+instance (Eq tc, Eq id) => Eq (Type tc id) where
+    (TVar x1) == (TVar x2) = x1 == x2
+    (TCon c1 args1) == (TCon c2 args2) = c1 == c2 && args1 == args2
+    (Univ x1 t1) == (Univ x2 t2) = t1 == substs [(x2, TVar x1)] t2
+    _ == _ = False
 
 instance Bind (Type tc) where
     scopeCheck (TVar sid) = identFor sid >>= \case
