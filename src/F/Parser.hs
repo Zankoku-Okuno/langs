@@ -10,7 +10,7 @@ import F.Syntax
 
 
 expr :: ArrC op => Parsec String () (Term () c op SourceId)
-expr = do
+expr = between2 (optional ws) $ do
     f <- inst
     args <- many $ ws *> inst
     pure $ foldl (App ()) f args
@@ -39,7 +39,7 @@ expr = do
     --mkApp f (Right t) = BigApp () f t
 
 ty :: ArrC op => Parsec String () (Type () op SourceId)
-ty = do
+ty = between2 (optional ws) $ do
     t <- atom
     ts <- many $ between2 (optional ws) (string "->") *> atom
     pure $ foldr1 (Arr ()) (t:ts)
