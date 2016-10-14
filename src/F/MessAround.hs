@@ -1,16 +1,15 @@
 {-#LANGUAGE FlexibleInstances #-}
 module F.MessAround where
 
-import Data.List
-import qualified AList as A
 
 import Const
 import F.Parser
 import F.Syntax
-import F.Print
 import F.Scope as Scope
 import F.Typecheck as Tc
+import F.Print
 
+import Data.List (intercalate)
 import Text.Luthor
 import Text.Luthor.Syntax
 import Text.Parsec.Combinator (eof)
@@ -29,13 +28,18 @@ main = do
 
 aFile filename = do
     contents <- readFile filename
+    putStrLn ""
+    putStrLn $ filename ++ ":"
     putStrLn contents
     case compile contents filename of
         Left err -> putStrLn err
         Right (e, t) -> print e >> print t
 
 -- FIXME kind check (really, make sure that type constructors are only given exactly the number of arguments that they have arity for)
-compile :: String -> SourceName -> Either String (Term () String String SourceId, Type () String SourceId)
+compile :: String -> SourceName -> Either String
+            ( Term () String String SourceId
+            , Type () String SourceId
+            )
 compile source from =
     case parse parser from source of
         Left err -> Left $ show err

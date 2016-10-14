@@ -17,8 +17,7 @@ cabal-version:       >=1.10
 
 executable langs
   main-is:             Main.hs
-  other-modules:       Ident,
-                       F.Syntax
+  -- other-modules:       
   -- other-extensions:    
   build-depends:       base >=4.6,
                        luthor ==0.0.2,
