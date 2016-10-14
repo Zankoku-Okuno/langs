@@ -4,50 +4,51 @@ module F.Parser where
 import Text.Luthor
 import Text.Luthor.Syntax
 
-import Const
 import F.Syntax
 
+-- FIXME change attr from () to some kind of SourceLocation
 
-expr :: Arr tc => Parsec String () (Term c tc Sid)
+
+expr :: ArrC op => Parsec String () (Term () c op SourceId)
 expr = do
     f <- inst
     args <- many $ ws *> inst
-    pure $ foldl App f args
+    pure $ foldl (App ()) f args
     where
     inst = do
         f <- atom
         ts <- many $ optional ws *> inBrackets ty
-        pure $ foldl TyApp f ts
-    atom = inParens expr <||> abs <||> tyAbs <||> (Var . TermId <$> var)
+        pure $ foldl (BigApp ()) f ts
+    atom = inParens expr <||> abs <||> tyAbs <||> (Var () . TermId <$> var)
         where
         abs = do
             x <- string "λ" *> annotVar
             e <- string "." *> optional ws *> expr
-            pure $ Abs x e
+            pure $ Abs () x e
         tyAbs = do
             a <- string "Λ" *> (TypeId <$> var)
             e <- string "." *> optional ws *> expr
-            pure $ TyAbs a e
+            pure $ BigAbs () a e
     annotVar = do
         x <- TermId <$> var
         optional ws >> string ":" >> optional ws
         t <- ty
         pure (x, t)
 
-    mkApp f (Left e) = App f e
-    mkApp f (Right t) = TyApp f t
+    --mkApp f (Left e) = App () f e
+    --mkApp f (Right t) = BigApp () f t
 
-ty :: Arr tc => Parsec String () (Type tc Sid)
+ty :: ArrC op => Parsec String () (Type () op SourceId)
 ty = do
     t <- atom
     ts <- many $ between2 (optional ws) (string "->") *> atom
-    pure $ foldr1 ArrTy (t:ts)
+    pure $ foldr1 (Arr ()) (t:ts)
     where
-    atom = inParens ty <||> univ <||> (TVar . TypeId <$> var)
+    atom = inParens ty <||> univ <||> (Var () . TypeId <$> var)
     univ = do
         a <- string "∀" *> (TypeId <$> var)
         t <- string "." *> optional ws *> ty
-        pure $ Univ a t
+        pure $ Forall () a t
 
 var = charClass "a-zA-Z0-9_" `many1Not` charClass "0-9"
 

@@ -1,48 +1,68 @@
 {-#LANGUAGE FlexibleContexts #-}
 module F.Typecheck where
 
-import AList (AList)
-import qualified AList as A
+import Control.Monad.Reader
 
-import Const
-import Ident
 import F.Syntax
+import F.Scope hiding (Context(..))
+
+data Context attr c op id = Ctx
+    { terms :: [(id TermLevel, Type attr op id)]
+    , consts :: [(c, Type attr op id)]
+    }
 
 
-data Context c tc id = Ctx (AList id (Type tc id)) (AList c (Type tc id))
-
-typeofVar :: (Eq id) => Context c tc id -> id -> Maybe (Type tc id)
-typeofVar (Ctx xs _) x = xs `A.lookup` x
-
-typeofCon :: (Eq c) => Context c tc id -> c -> Maybe (Type tc id)
-typeofCon (Ctx _ cs) c = cs `A.lookup` c
-
-bindVar :: (Eq id) => Context c tc id -> (id, Type tc id) -> Context c tc id
-bindVar (Ctx xs cs) (x, t) = Ctx (A.update xs x t) cs
-
-
-typeCheck :: (Eq id, Eq (Type tc id), Eq c, Eq tc, Arr tc) => Context c tc id -> Term c tc id -> Maybe (Type tc id)
-typeCheck ctx (Var x) = ctx `typeofVar` x
-typeCheck ctx (Con c) = ctx `typeofCon` c
-typeCheck ctx (Abs (x, t1) e) = do
-    t2 <- typeCheck (ctx `bindVar` (x, t1)) e
-    return $ ArrTy t1 t2
-typeCheck ctx (App e1 e2) = do
-    tf <- typeCheck ctx e1
-    t <- typeCheck ctx e2
-    unifyFun tf t
-typeCheck ctx (TyAbs a e) = do
-    t <- typeCheck ctx e
-    return $ Univ a t
-typeCheck ctx (TyApp e t) = do
-    sigma <- typeCheck ctx e
-    inst sigma t
+typeCheck :: (Eq (id TermLevel), Eq (id TypeLevel),
+                Eq c, Eq op, ArrC op) =>
+             Context attr c op id -> Term attr c op id -> Maybe (Type attr op id)
+typeCheck ctx0 e = runReaderT (go e) ctx0
+    where
+    go (Var' x) = lift . lookup x =<< asks terms
+    go (Const' c) = lift . lookup c =<< asks consts
+    go (Abs' (x, t1) e) = do
+        ctx <- ask
+        let ctx' = ctx { terms = (x, t1) : terms ctx }
+        t2 <- local (const ctx') (go e)
+        pure $ Arr undefined t1 t2
+    go (App' e1 e2) = do
+        tf <- go e1
+        t <- go e2
+        lift $ unifyFun tf t
+    go (BigAbs' a e) = Forall undefined a <$> go e
+    go (BigApp' e t) = do
+        sigma <- go e
+        lift $ inst sigma t
 
 
-unifyFun :: (Eq (Type tc id), Arr tc) => Type tc id -> Type tc id -> Maybe (Type tc id)
-unifyFun (ArrTy t1 t2) t1' | t1 == t1' = Just t2
+
+
+------------ FIXME move to a unify module
+
+
+-- NOTE: this is not equivalence, but mere syntactic equality, not even up to alpha-renaming
+instance (Eq op, Eq (id TypeLevel)) => Eq (Type attr op id) where
+    (Var' x1) == (Var' x2) = x1 == x2
+    (Ctor' c1 args1) == (Ctor' c2 args2) = c1 == c2 && args1 == args2
+    (Forall' _ _) == _ = error "Attempt to test equality on polytype; did you mean equivalence?"
+    _ == (Forall' _ _) = error "Attempt to test equality on polytype; did you mean equivalence?"
+    _ == _ = False
+
+tyEquiv :: (Eq (id TypeLevel), Eq op) =>
+            Type attr op id -> Type attr op id -> Bool
+tyEquiv (Mono t1) (Mono t2) = t1 == t2
+tyEquiv (Forall' a1 t1) (Forall' a2 t2) =
+    let theta = Subst [] [(a1, Var undefined a2)]
+    in t1 == tySubst theta t2
+
+
+unifyFun :: (Eq (id TermLevel), Eq (id TypeLevel), Eq op,
+                ArrC op) =>
+            Type attr op id -> Type attr op id -> Maybe (Type attr op id)
+unifyFun (Arr' t1 t2) t1' | t1 `tyEquiv` t1' = Just t2
 unifyFun _ _ = Nothing
 
-inst :: (Eq id) => Type tc id -> Type tc id -> Maybe (Type tc id)
-inst (Univ a sigma) t = Just $ subst [(a, t)] sigma
+inst :: (Eq (id TypeLevel), Eq op) => Type attr op id -> Type attr op id -> Maybe (Type attr op id)
+inst (Forall' a sigma) t = Just $
+    let theta = Subst [] [(a, t)]
+    in tySubst theta sigma
 inst _ _ = Nothing

@@ -10,8 +10,8 @@ import Lambda.Syntax
 type Context id = [id TermLevel]
 type Subst attr c id = [(id TermLevel, Term attr c id)]
 
-
-scopeCheck :: (Eq (id TermLevel)) => Term attr c id -> [(attr, id TermLevel)]
+type ScopeError attr id = (attr, id TermLevel)
+scopeCheck :: (Eq (id TermLevel)) => Term attr c id -> [ScopeError attr id]
 scopeCheck e = execWriter (runReaderT (go e) [])
     where
     go (Var attr x) = do

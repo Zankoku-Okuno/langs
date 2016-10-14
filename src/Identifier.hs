@@ -4,6 +4,7 @@
             MultiParamTypeClasses, FunctionalDependencies #-}
 module Identifier
     ( TermLevel, TypeLevel, KindLevel
+    , IdC
     , pattern TermId, pattern TypeId, pattern KindId
     , SourceId(..)
     , DeBruijnId(..)
@@ -54,6 +55,10 @@ instance Eq (SourceId level) where
     (SourceTypeId a) == (SourceTypeId b) = a == b
     (SourceKindId k) == (SourceKindId k') = k == k'
 
+instance Show (SourceId level) where
+    show (SourceTermId x) = x
+    show (SourceTypeId a) = '\'':a
+    show (SourceKindId k) = "''"++k
 
 
 data DeBruijnId orig level where

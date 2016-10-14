@@ -1,151 +1,149 @@
-{-#LANGUAGE LambdaCase,
-            PatternSynonyms, ViewPatterns,
-            TypeFamilies,
-            LiberalTypeSynonyms #-}
-module F.Syntax where
+{-#LANGUAGE LambdaCase, PatternSynonyms, ViewPatterns,
+            FlexibleInstances, FlexibleContexts,
+            MultiParamTypeClasses #-}
+module F.Syntax
+    ( Type, Term
+    , module Identifier
+    , module Syntax, ArrC
+    ) where
 
-import Data.List
-
-import Control.Monad.Reader
-import Control.Monad.Writer
-
-import AList hiding (lookup)
-import qualified AList as A
-import Ident
 import Const
-
-data Sid = TermId String
-         | TypeId String
-    deriving (Eq)
-
-data Id = Id Sid Unique -- FIXME needs source location reporting
-instance Show Id where
-    show (Id var _) = show var
-
-instance Eq Id where
-    (Id _ x) == (Id _ y) = x == y
-
-instance MkId Id where
-    type Args Id = Sid
-    mkId = Id
-
-    type SourceId Id = Sid
-    fromSource = Id
+import Identifier
+import Syntax
 
 
 
+data Type attr op id
+    = TVar_ attr (id TypeLevel)
+    | TCtor_ attr op [Type attr op id]
+    | Forall_ attr (id TypeLevel) (Type attr op id)
+
+instance VarC attr (Type attr op id) (id TypeLevel) where
+    toVar = TVar_
+    fromVar (TVar_ attr a) = Just (attr, a)
+    fromVar _ = Nothing
+instance CtorC attr (Type attr op id) op (Type attr op id) where
+    toCtor = TCtor_
+    fromCtor (TCtor_ attr op ts) = Just (attr, op, ts)
+    fromCtor _ = Nothing
+instance ForallC attr (Type attr op id) (id TypeLevel) where
+    toForall = Forall_
+    fromForall (Forall_ attr a sigma) = Just (attr, a, sigma)
+    fromForall _ = Nothing
 
 
-data Type tc id
-    = TVar id
-    | TCon tc [Type tc id]
-    | Univ id (Type tc id)
+instance MonotypeC (Type attr op id) (Type attr op id) where
+    toMonotype t@(Var' _) = Just t
+    toMonotype t@(Ctor' op sigmas) = const t <$> mapM toMonotype sigmas
+    toMonotype _ = Nothing
+    fromMonotype = id
 
-pattern ArrTy a b <- (TCon (isArr -> True) [a, b])
-    where
-    ArrTy a b = TCon mkArr [a, b]
 
-instance (Eq tc, Eq id) => Eq (Type tc id) where
-    (TVar x1) == (TVar x2) = x1 == x2
-    (TCon c1 args1) == (TCon c2 args2) = c1 == c2 && args1 == args2
-    (Univ x1 t1) == (Univ x2 t2) = t1 == subst [(x2, TVar x1)] t2
-    _ == _ = False
+--instance Bind (Type op) where
+--    scopeCheck (TVar sid) = identFor sid >>= \case
+--        Nothing -> do
+--            scopeError sid
+--            pure $ TVar undefined
+--        Just id -> pure $ TVar id
+--    scopeCheck (TCon c ts) = TCon c <$> scopeCheck `mapM` ts
+--    scopeCheck (Univ sid t) = withFresh sid $ \id ->
+--        Univ id <$> scopeCheck t
 
-instance Bind (Type tc) where
-    scopeCheck (TVar sid) = identFor sid >>= \case
-        Nothing -> do
-            scopeError sid
-            pure $ TVar undefined
-        Just id -> pure $ TVar id
-    scopeCheck (TCon c ts) = TCon c <$> scopeCheck `mapM` ts
-    scopeCheck (Univ sid t) = withFresh sid $ \id ->
-        Univ id <$> scopeCheck t
+--    fv (TVar a) = [a]
+--    fv (TCon _ ts) = foldr union [] $ fv <$> ts
+--    fv (Univ id t) = delete id $ fv t
 
-    fv (TVar a) = [a]
-    fv (TCon _ ts) = foldr union [] $ fv <$> ts
-    fv (Univ id t) = delete id $ fv t
-
-    type Subst (Type tc) id = [(id, Type tc id)]
-    subst theta (TVar a) = case lookup a theta of
-        Nothing -> TVar a
-        Just t -> t
-    subst theta (TCon c ts) = TCon c $ subst theta <$> ts
-    subst theta (Univ a t) = Univ a (subst theta' t)
-        where theta' = filter ((/= a) . fst) theta
+--    type Subst (Type op) id = [(id, Type op id)]
+--    subst theta (TVar a) = case lookup a theta of
+--        Nothing -> TVar a
+--        Just t -> t
+--    subst theta (TCon c ts) = TCon c $ subst theta <$> ts
+--    subst theta (Univ a t) = Univ a (subst theta' t)
+--        where theta' = filter ((/= a) . fst) theta
 
 
 
 
 
-data Term c tc id
-    = Var id
-    | Con c
-    | Abs (id, Type tc id) (Term c tc id)
-    | App (Term c tc id) (Term c tc id)
-    | TyAbs id (Term c tc id)
-    | TyApp (Term c tc id) (Type tc id)
+data Term attr c op id
+    = Var_ attr (id TermLevel)
+    | Const_ attr c
+    | Abs_ attr (id TermLevel, Type attr op id) (Term attr c op id)
+    | App_ attr (Term attr c op id) (Term attr c op id)
+    | BigAbs_ attr (id TypeLevel) (Term attr c op id)
+    | BigApp_ attr (Term attr c op id) (Type attr op id)
 
-
-instance Bind (Term c tc) where
-    scopeCheck (Var sid) = identFor sid >>= \case
-        Nothing -> do
-            scopeError sid
-            pure $ Var undefined
-        Just id -> pure $ Var id
-    scopeCheck (Con c) = pure (Con c)
-    scopeCheck (Abs (sid, t) e) = do
-        t' <- scopeCheck t
-        withFresh sid $ \x -> do
-            e' <- scopeCheck e
-            pure $ Abs (x, t') e'
-    scopeCheck (App e1 e2) = App <$> scopeCheck e1 <*> scopeCheck e2
-    scopeCheck (TyAbs sid e) = withFresh sid $ \a -> do
-        e' <- scopeCheck e
-        pure $ TyAbs a e'
-    scopeCheck (TyApp e t) = TyApp <$> scopeCheck e <*> scopeCheck t
-
-    fv (Var x) = [x]
-    fv (Con _) = []
-    fv (Abs (x, _) e) = delete x $ fv e
-    fv (App e1 e2) = fv e1 `union` fv e2
-    fv (TyAbs a e) = delete a $ fv e
-    fv (TyApp e t) = fv e `union` fv t
-
-    type Subst (Term c tc) id = ([(id, Term c tc id)], [(id, Type tc id)])
-    subst theta (Var x) = case lookup x (fst theta) of
-        Nothing -> Var x
-        Just e -> e
-    subst theta (Con c) = Con c
-    subst theta (Abs (x, t) e) = Abs (x, subst (snd theta) t) (subst theta' e)
-        where theta' = (filter ((/= x) . fst) $ fst theta, snd theta)
-    subst theta (App e1 e2) = App (subst theta e1) (subst theta e2)
-    subst theta (TyAbs a e) = TyAbs a (subst theta' e)
-        where theta' = (fst theta, filter ((/= a) . fst) $ snd theta)
-    subst theta (TyApp e t) = TyApp (subst theta e) (subst (snd theta) t)
-
-ftv :: (Eq id) => Term c tc id -> [id]
-ftv (Var _) = []
-ftv (Con _) = []
-ftv (Abs (_, t) e) = fv t `union` ftv e
-ftv (App e1 e2) = ftv e1 `union` ftv e2
+instance VarC attr (Term attr c op id) (id TermLevel) where
+    toVar = Var_
+    fromVar (Var_ attr x) = Just (attr, x)
+    fromVar _ = Nothing
+instance ConstC attr (Term attr c op id) c where
+    toConst = Const_
+    fromConst (Const_ attr c) = Just (attr, c)
+    fromConst _ = Nothing
+instance AbsC attr (Term attr c op id) (id TermLevel, Type attr op id) where
+    toAbs = Abs_
+    fromAbs (Abs_ attr x e) = Just (attr, x, e)
+    fromAbs _ = Nothing
+instance AppC attr (Term attr c op id) where
+    toApp = App_
+    fromApp (App_ attr e1 e2) = Just (attr, e1, e2)
+    fromApp _ = Nothing
+instance BigAbsC attr (Term attr c op id) (id TypeLevel) where
+    toBigAbs = BigAbs_
+    fromBigAbs (BigAbs_ attr a e) = Just (attr, a, e)
+    fromBigAbs _ = Nothing
+instance BigAppC attr (Term attr c op id) (Type attr op id) where
+    toBigApp = BigApp_
+    fromBigApp (BigApp_ attr e t) = Just (attr, e, t)
+    fromBigApp _ = Nothing
 
 
 
+--instance Bind (Term c op) where
+--    scopeCheck (Var sid) = identFor sid >>= \case
+--        Nothing -> do
+--            scopeError sid
+--            pure $ Var undefined
+--        Just id -> pure $ Var id
+--    scopeCheck (Con c) = pure (Con c)
+--    scopeCheck (Abs (sid, t) e) = do
+--        t' <- scopeCheck t
+--        withFresh sid $ \x -> do
+--            e' <- scopeCheck e
+--            pure $ Abs (x, t') e'
+--    scopeCheck (App e1 e2) = App <$> scopeCheck e1 <*> scopeCheck e2
+--    scopeCheck (TyAbs sid e) = withFresh sid $ \a -> do
+--        e' <- scopeCheck e
+--        pure $ TyAbs a e'
+--    scopeCheck (TyApp e t) = TyApp <$> scopeCheck e <*> scopeCheck t
+
+--    fv (Var x) = [x]
+--    fv (Con _) = []
+--    fv (Abs (x, _) e) = delete x $ fv e
+--    fv (App e1 e2) = fv e1 `union` fv e2
+--    fv (TyAbs a e) = delete a $ fv e
+--    fv (TyApp e t) = fv e `union` fv t
+
+--    type Subst (Term c op) id = ([(id, Term c op id)], [(id, Type op id)])
+--    subst theta (Var x) = case lookup x (fst theta) of
+--        Nothing -> Var x
+--        Just e -> e
+--    subst theta (Con c) = Con c
+--    subst theta (Abs (x, t) e) = Abs (x, subst (snd theta) t) (subst theta' e)
+--        where theta' = (filter ((/= x) . fst) $ fst theta, snd theta)
+--    subst theta (App e1 e2) = App (subst theta e1) (subst theta e2)
+--    subst theta (TyAbs a e) = TyAbs a (subst theta' e)
+--        where theta' = (fst theta, filter ((/= a) . fst) $ snd theta)
+--    subst theta (TyApp e t) = TyApp (subst theta e) (subst (snd theta) t)
+
+--ftv :: (Eq id) => Term c op id -> [id]
+--ftv (Var _) = []
+--ftv (Con _) = []
+--ftv (Abs (_, t) e) = fv t `union` ftv e
+--ftv (App e1 e2) = ftv e1 `union` ftv e2
 
 
 
-instance Show Sid where
-    show (TermId x) = x
-    show (TypeId a) = '\'':a
-instance (Show tc, Show id, Arr tc) => Show (Type tc id) where
-    show (TVar a) = show a
-    show (ArrTy a b) = concat ["(", show a, " -> ", show b, ")"]
-    show (TCon c ts) = "(" ++ intercalate " " (show c : (show <$> ts)) ++ ")"
-    show (Univ a t) = concat ["(∀", show a, ". ", show t, ")"]
-instance (Show tc, Show id, Arr tc) => Show (Term c tc id) where
-    show (Var x) = show x
-    show (Abs (x, t) e) = concat ["(", "λ", show x, ". ", show e, ")"]
-    show (App e1 e2) = concat ["(", show e1, " ", show e2, ")"]
-    show (TyAbs a e) = concat ["(", "Λ", show a, ". ", show e, ")"]
-    show (TyApp e t) = concat [show e, "[", show t, "]"]
+
 

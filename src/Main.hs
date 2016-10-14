@@ -19,6 +19,7 @@ main = do
     case scopeCheck term of
         [] -> print =<< eval delta term
         errs -> mapM_ (putStrLn . ("scope error: " ++)) (show <$> errs)
+    F.MessAround.main
 
 
 delta attr _ _ = putStrLn ("HA!" ++ show attr) >> pure Nothing

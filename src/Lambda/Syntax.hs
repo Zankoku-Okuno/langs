@@ -34,7 +34,8 @@ instance AppC attr (Term attr c id) where
     fromApp _ = Nothing
 
 
-instance ValueC (Term attr c id) where
-    isValue (Const' _) = True
-    isValue (Abs' _ _) = True
-    isValue _ = False
+instance ValueC (Term attr c id) (Term attr c id) where
+    toValue x@(Const' _) = Just x
+    toValue x@(Abs' _ _) = Just x
+    toValue _ = Nothing
+    fromValue = id

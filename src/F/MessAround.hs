@@ -4,11 +4,12 @@ module F.MessAround where
 import Data.List
 import qualified AList as A
 
-import Ident
 import Const
 import F.Parser
 import F.Syntax
-import F.Typecheck
+import F.Print
+import F.Scope as Scope
+import F.Typecheck as Tc
 
 import Text.Luthor
 import Text.Luthor.Syntax
@@ -16,7 +17,7 @@ import Text.Parsec.Combinator (eof)
 import System.Environment
 
 
-instance Arr String where
+instance ArrC String where
     mkArr = "->"
     isArr = (== "->")
 
@@ -28,21 +29,25 @@ main = do
 
 aFile filename = do
     contents <- readFile filename
+    putStrLn contents
     case compile contents filename of
         Left err -> putStrLn err
         Right (e, t) -> print e >> print t
 
-compile :: String -> SourceName -> Either String (Term String String Id, Type String Id)
-compile source from = 
+-- FIXME kind check (really, make sure that type constructors are only given exactly the number of arguments that they have arity for)
+compile :: String -> SourceName -> Either String (Term () String String SourceId, Type () String SourceId)
+compile source from =
     case parse parser from source of
         Left err -> Left $ show err
-        Right e -> case runScope $ scopeCheck e of
-            Left err -> Left $ "Free variables: " ++ intercalate ", " (show <$> err)
-            Right e -> case typeCheck ctx0 e of
+        Right e -> case scopeCheck scopeCtx0 e of
+            errs@(_:_) -> Left $ "Free variables:\n\t" ++ intercalate "\n\t" (show <$> errs)
+            [] -> case typeCheck tcCtx0 e of
                 Nothing -> Left "type error"
                 Just t -> Right (e, t)
     where
     parser = (expr <* many (void lws <||> newline) <* eof)
 
-ctx0 :: Context String String Id
-ctx0 = Ctx A.empty A.empty
+scopeCtx0 :: Scope.Context SourceId
+scopeCtx0 = Scope.Ctx [] []
+tcCtx0 :: Tc.Context () String String SourceId
+tcCtx0 = Tc.Ctx [] []

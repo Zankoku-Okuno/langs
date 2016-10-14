@@ -2,6 +2,7 @@
             MultiParamTypeClasses, FunctionalDependencies #-}
 module Syntax where
 
+import Const
 
 class VarC attr s x | s -> x, s -> attr where
     toVar :: attr -> x -> s
@@ -18,6 +19,20 @@ pattern Const :: (ConstC attr s c) => attr -> c -> s
 pattern Const attr c <- (fromConst -> Just (attr, c))
     where Const = toConst
 pattern Const' c <- Const _ c
+
+class CtorC attr s c t | s -> attr, s -> c, s -> t where
+    toCtor :: attr -> c -> [t] -> s
+    fromCtor :: s -> Maybe (attr, c, [t])
+pattern Ctor :: (CtorC attr s c t) => attr -> c -> [t] -> s
+pattern Ctor attr c ts <- (fromCtor -> Just (attr, c, ts))
+    where Ctor = toCtor
+pattern Ctor' c ts <- Ctor _ c ts
+
+pattern Arr :: (CtorC attr s op t, ArrC op) => attr -> t -> t -> s
+pattern Arr attr a b <- (Ctor attr (isArr -> True) [a, b])
+    where
+    Arr attr a b = Ctor attr mkArr [a, b]
+pattern Arr' a b <- Arr _ a b
 
 class AbsC attr s x | s -> x, s -> attr where
     toAbs :: attr -> x -> s -> s
@@ -69,12 +84,16 @@ pattern Exists' a t <- Exists _ a t
 
 
 
-class ValueC s where
-    isValue :: s -> Bool
-pattern Value :: (ValueC s) => s -> s
-pattern Value v <- (\e -> if isValue e then Just e else Nothing -> Just v)
+class ValueC e v | e -> v where
+    toValue :: e -> Maybe v
+    fromValue :: v -> e
+pattern Value :: (ValueC e v) => v -> e
+pattern Value v <- (toValue -> Just v)
+    where Value = fromValue
 
-class MonotypeC s where
-    isMonotype :: s -> Bool
-pattern Mono :: (MonotypeC s) => s -> s
-pattern Mono t <- (\s -> if isMonotype s then Just s else Nothing -> Just t)
+class MonotypeC s t | s -> t where
+    toMonotype :: s -> Maybe t
+    fromMonotype :: t -> s
+pattern Mono :: (MonotypeC s t) => t -> s
+pattern Mono t <- (toMonotype -> Just t)
+    where Mono = fromMonotype

@@ -1,9 +1,9 @@
 module Const where
 
-class Unit c where
+class UnitC c where
     mkUnit :: c
     isUnit :: c -> Bool
 
-class Arr c where
+class ArrC c where
     mkArr :: c
     isArr :: c -> Bool
