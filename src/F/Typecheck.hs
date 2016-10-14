@@ -44,5 +44,5 @@ unifyFun (ArrTy t1 t2) t1' | t1 == t1' = Just t2
 unifyFun _ _ = Nothing
 
 inst :: (Eq id) => Type tc id -> Type tc id -> Maybe (Type tc id)
-inst (Univ a sigma) t = Just $ substs [(a, t)] sigma
+inst (Univ a sigma) t = Just $ subst [(a, t)] sigma
 inst _ _ = Nothing

@@ -1,3 +1,4 @@
+{-#LANGUAGE FlexibleContexts #-}
 module F.Parser where
 
 import Text.Luthor
@@ -9,23 +10,27 @@ import F.Syntax
 
 expr :: Arr tc => Parsec String () (Term c tc Sid)
 expr = do
-    f <- atom
-    args <- many $ string " " *> (Left <$> atom <||> Right <$> inBrackets ty)
-    pure $ foldl mkApp f args
+    f <- inst
+    args <- many $ ws *> inst
+    pure $ foldl App f args
     where
-    atom = inParens expr <||> abs <||> tyAbs <||> (Var . TermVar <$> var)
+    inst = do
+        f <- atom
+        ts <- many $ optional ws *> inBrackets ty
+        pure $ foldl TyApp f ts
+    atom = inParens expr <||> abs <||> tyAbs <||> (Var . TermId <$> var)
         where
         abs = do
             x <- string "λ" *> annotVar
-            e <- string ". " *> expr
+            e <- string "." *> optional ws *> expr
             pure $ Abs x e
         tyAbs = do
-            a <- string "Λ" *> (TypeVar <$> var)
-            e <- string ". " *> expr
+            a <- string "Λ" *> (TypeId <$> var)
+            e <- string "." *> optional ws *> expr
             pure $ TyAbs a e
     annotVar = do
-        x <- TermVar <$> var
-        string ":"
+        x <- TermId <$> var
+        optional ws >> string ":" >> optional ws
         t <- ty
         pure (x, t)
 
@@ -35,13 +40,18 @@ expr = do
 ty :: Arr tc => Parsec String () (Type tc Sid)
 ty = do
     t <- atom
-    ts <- many $ string " -> " *> atom
+    ts <- many $ between2 (optional ws) (string "->") *> atom
     pure $ foldr1 ArrTy (t:ts)
     where
-    atom = inParens ty <||> univ <||> (TVar . TypeVar <$> var)
+    atom = inParens ty <||> univ <||> (TVar . TypeId <$> var)
     univ = do
-        a <- string "∀" *> (TypeVar <$> var)
-        t <- string ". " *> ty
+        a <- string "∀" *> (TypeId <$> var)
+        t <- string "." *> optional ws *> ty
         pure $ Univ a t
 
 var = charClass "a-zA-Z0-9_" `many1Not` charClass "0-9"
+
+
+
+ws :: Stream s m Char => ParsecT s a m ()
+ws = many1_ (void lws <||> newline)

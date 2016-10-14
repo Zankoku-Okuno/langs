@@ -45,7 +45,7 @@ class Bind f where
     fv :: (Eq id) => f id -> [id]
     
     type Subst f id
-    substs :: (Eq id) => Subst f id -> f id -> f id
+    subst :: (Eq id) => Subst f id -> f id -> f id
 
 
 
