@@ -1,47 +1,29 @@
-{-#LANGUAGE FlexibleInstances #-}
+{-#LANGUAGE OverloadedStrings, FlexibleInstances #-}
 module Main where
 
-import Data.List
-import qualified AList as A
+import Data.String (IsString(..))
 
-import Ident
-import Const
-import F.Parser
-import F.Syntax
-import F.Typecheck
+import Syntax
+import Lambda.Syntax
+import Lambda.Scope
+import Lambda.Interpreter
+import Lambda.Print
 
-import Text.Luthor
-import Text.Luthor.Syntax
-import Text.Parsec.Combinator (eof)
-import System.Environment
+import qualified F.MessAround
 
-instance Arr String where
-    mkArr = "->"
-    isArr = (== "->")
-
+term :: Term () Int SourceId
+term = App () (App () (Abs () "x" $ Abs () "x" $ Var () "x") (Const () 4)) (Const () 5)
 
 main = do
-    files <- getArgs
-    aFile `mapM_` files
-    --putStrLn "Goodbyte, cruel world!"
+    print term
+    case scopeCheck term of
+        [] -> print =<< eval delta term
+        errs -> mapM_ (putStrLn . ("scope error: " ++)) (show <$> errs)
 
-aFile filename = do
-    contents <- readFile filename
-    case compile contents filename of
-        Left err -> putStrLn err
-        Right (e, t) -> print e >> print t
 
-compile :: String -> SourceName -> Either String (Term String String Id, Type String Id)
-compile source from = 
-    case parse parser from source of
-        Left err -> Left $ show err
-        Right e -> case runScope $ scopeCheck e of
-            Left err -> Left $ "Free variables: " ++ intercalate ", " (show <$> err)
-            Right e -> case typeCheck ctx0 e of
-                Nothing -> Left "type error"
-                Just t -> Right (e, t)
-    where
-    parser = (expr <* many (void lws <||> newline) <* eof)
+delta attr _ _ = putStrLn ("HA!" ++ show attr) >> pure Nothing
 
-ctx0 :: Context String String Id
-ctx0 = Ctx A.empty A.empty
+
+
+instance IsString (SourceId TermLevel) where
+    fromString = TermId
