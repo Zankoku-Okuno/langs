@@ -87,3 +87,79 @@ instance IsString (Id StrId TypeLevel) where
     fromString = TypeId . TypeStrId
 instance IsString (Id StrId KindLevel) where
     fromString = KindId . KindStrId
+
+
+------ Contexts ------
+
+data Gamma attr (c :: * -> *) (id :: * -> *) terms types kinds = Gamma
+    { termGamma :: [(id TermLevel, terms attr c id)]
+    , typeGamma :: [(id TypeLevel, types attr c id)]
+    , kindGamma :: [(id KindLevel, kinds attr c id)]
+    }
+emptyGamma :: Gamma attr c id terms types kinds
+emptyGamma = Gamma
+    { termGamma = []
+    , typeGamma = []
+    , kindGamma = []
+    }
+
+-- FIXME make a contexty class with addX, delX, hasX, getX
+addTermGamma :: (id TermLevel, terms attr c id) -> Gamma attr c id terms types kinds -> Gamma attr c id terms types kinds
+addTermGamma add theta0 = theta0 { termGamma = add : termGamma theta0 }
+addTypeGamma :: (id TypeLevel, types attr c id) -> Gamma attr c id terms types kinds -> Gamma attr c id terms types kinds
+addTypeGamma add theta0 = theta0 { typeGamma = add : typeGamma theta0 }
+addKindGamma :: (id KindLevel, kinds attr c id) -> Gamma attr c id terms types kinds -> Gamma attr c id terms types kinds
+addKindGamma add theta0 = theta0 { kindGamma = add : kindGamma theta0 }
+
+delTermGamma :: Eq (id TermLevel) => id TermLevel -> Gamma attr c id terms types kinds -> Gamma attr c id terms types kinds
+delTermGamma del theta0 = theta0 { termGamma = [ it | it <- termGamma theta0, fst it /= del] }
+delTypeGamma :: Eq (id TypeLevel) => id TypeLevel -> Gamma attr c id terms types kinds -> Gamma attr c id terms types kinds
+delTypeGamma del theta0 = theta0 { typeGamma = [ it | it <- typeGamma theta0, fst it /= del] }
+delKindGamma :: Eq (id KindLevel) => id KindLevel -> Gamma attr c id terms types kinds -> Gamma attr c id terms types kinds
+delKindGamma del theta0 = theta0 { kindGamma = [ it | it <- kindGamma theta0, fst it /= del] }
+
+
+data Constants attr (c :: * -> *) (id :: * -> *) terms types kinds = Constants
+    { termConstants :: c TermLevel -> Maybe (terms attr c id)
+    , typeConstants :: c TypeLevel -> Maybe (types attr c id)
+    , kindConstants :: c KindLevel -> Maybe (kinds attr c id)
+    }
+emptyConstants :: Constants attr c id terms types kinds
+emptyConstants = Constants
+    { termConstants = const Nothing
+    , typeConstants = const Nothing
+    , kindConstants = const Nothing
+    }
+
+
+data Context attr c id terms types kinds = Ctx
+    { gamma :: Gamma attr c id terms types kinds
+    , constants :: Constants attr c id terms types kinds
+    }
+emptyContext :: Context attr c id terms types kinds
+emptyContext = Ctx
+    { gamma = emptyGamma
+    , constants = emptyConstants
+    }
+
+terms = termGamma . gamma
+types = typeGamma . gamma
+kinds = kindGamma . gamma
+
+termConsts = termConstants . constants
+typeConsts = typeConstants . constants
+kindConsts = kindConstants . constants
+
+addTerm :: (id TermLevel, terms attr c id) -> Context attr c id terms types kinds -> Context attr c id terms types kinds
+addTerm add ctx = ctx { gamma = addTermGamma add $ gamma ctx }
+addType :: (id TypeLevel, types attr c id) -> Context attr c id terms types kinds -> Context attr c id terms types kinds
+addType add ctx = ctx { gamma = addTypeGamma add $ gamma ctx }
+addKind :: (id KindLevel, kinds attr c id) -> Context attr c id terms types kinds -> Context attr c id terms types kinds
+addKind add ctx = ctx { gamma = addKindGamma add $ gamma ctx }
+
+-- The datatype `Paramd` is there pure to wrap up types `a :: *` into
+-- type constructors suitable for contexts
+-- (which must have kind `* -> (* -> *) -> (* -> *) -> *)
+data Paramd a attr (c :: * -> *) (id :: * -> *) = Paramd a
+type Nada = Paramd ()
+pattern Nada = Paramd ()

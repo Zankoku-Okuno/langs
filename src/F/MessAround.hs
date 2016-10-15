@@ -54,18 +54,22 @@ compile :: String -> SourceName -> Either String
 compile source from =
     case parse parser from source of
         Left err -> Left $ show err
-        Right e -> case scopeCheck scopeCtx0 e of
-            errs@(_:_) -> Left $ "Free variables:\n\t" ++ intercalate "\n\t" (show <$> errs)
-            [] -> case typeCheck tcCtx0 e of
-                Left errs -> Left $ intercalate "\n" (show <$> errs)
-                Right t -> Right (e, codegen e, t)
+        Right e -> case typeCheck ctx0 e of
+            Left errs -> Left $ intercalate "\n" (show <$> errs)
+            Right t -> Right (e, codegen e, t)
     where
     parser = (expr <* eof)
 
-scopeCtx0 :: Scope.Context (Id StrId)
-scopeCtx0 = Scope.Ctx [] []
-tcCtx0 :: Tc.Context () (C String) (Id StrId)
-tcCtx0 = Tc.Ctx [] (const Nothing) (flip lookup [(TypeC "->", 2), (TypeC "Int", 0)])
+
+ctx0 :: Context () (C String) (Id StrId) Type (Paramd Int) Nada
+ctx0 = Ctx
+    { gamma = emptyGamma
+    , constants = emptyConstants { typeConstants = flip lookup
+            [ (TypeC "->", Paramd 2)
+            , (TypeC "Int", Paramd 0)
+            ]
+        }
+    }
 
 
 

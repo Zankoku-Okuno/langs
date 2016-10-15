@@ -21,7 +21,8 @@ tyEquiv (Ctor' c1 args1) (Ctor' c2 args2) =
        c1 == c2
     && and (zipWith tyEquiv args1 args2)
 tyEquiv (Forall' a t1) (Forall' b t2) =
-    t1 `tyEquiv` tySubst (Subst [] [(b, Var undefined a)]) t2
+    let theta = addTypeGamma (b, Var undefined a) emptyGamma
+    in t1 `tyEquiv` tySubst theta t2
 tyEquiv _ _ = False
 
 
@@ -34,6 +35,6 @@ unifyFun _ _ = Nothing
 inst :: (Eq (id TypeLevel), Eq (c TypeLevel)
         ) => Type attr c id -> Type attr c id -> Maybe (Type attr c id)
 inst (Forall' a sigma) t = Just $
-    let theta = Subst [] [(a, t)]
+    let theta = addTypeGamma (a, t) emptyGamma
     in tySubst theta sigma
 inst _ _ = Nothing
