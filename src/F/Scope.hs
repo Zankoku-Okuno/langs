@@ -1,5 +1,5 @@
-{-#LANGUAGE KindSignatures, FlexibleContexts #-}
-module F.Scope where
+{-#LANGUAGE KindSignatures, FlexibleContexts, FlexibleInstances, MultiParamTypeClasses #-}
+module F.Scope () where
 
 import Data.Maybe (fromMaybe)
 import Control.Monad.Reader
@@ -8,16 +8,8 @@ import Control.Monad.Writer
 import F.Syntax
 
 
-type Subst attr c id = Gamma attr c id Term Type Nada
-
-subst :: (Eq (id TermLevel), Eq (id TypeLevel)) =>
-         Subst attr c id -> Term attr c id -> Term attr c id
-subst ctx0 e = runReader (goTerm e) ctx0
-
-tySubst :: (Eq (id TypeLevel)) =>
-            Subst attr c id -> Type attr c id -> Type attr c id
-tySubst ctx0 e = runReader (goType e) ctx0
-
+instance (Eq (id TermLevel), Eq (id TypeLevel)) => Substitute (Gamma attr c id Term Type Nada) (Term attr c id) where
+    subst ctx0 e = runReader (goTerm e) ctx0
 goTerm e@(Var' x) = fromMaybe e <$> asks (lookup x . termGamma)
 goTerm c@(Const' _) = pure c
 goTerm (Abs attr (x, t) e) = do
@@ -30,6 +22,9 @@ goTerm (BigAbs attr a e) = do
     pure $ BigAbs attr a e'
 goTerm (BigApp attr e t) = BigApp attr <$> goTerm e <*> goType t
 
+
+instance (Eq (id TypeLevel)) => Substitute (Gamma attr c id Term Type Nada) (Type attr c id) where
+    subst ctx0 t = runReader (goType t) ctx0
 goType t@(Var' a) = fromMaybe t <$> asks (lookup a . typeGamma)
 goType (Ctor attr c ts) = Ctor attr c <$> (goType `mapM` ts)
 goType (Forall attr a t) = do

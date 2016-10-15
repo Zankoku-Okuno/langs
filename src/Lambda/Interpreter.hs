@@ -28,6 +28,6 @@ eval delta e = do
         e2 <- go e2
         let stuck = pure $ App attr e1 e2
         case (e1, e2) of
-            (Abs' x e, v) -> go $ subst (addTermGamma (x, v) emptyGamma) e
+            (Abs' x e, v) -> go $ (x, v) `substTerm` e
             (Const attr c, v) -> delta attr c v >>= maybe stuck go
             _ -> stuck

@@ -1,4 +1,4 @@
-{-#LANGUAGE FlexibleInstances, FlexibleContexts #-}
+{-#LANGUAGE FlexibleInstances, FlexibleContexts, MultiParamTypeClasses #-}
 module Lambda.Scope where
 
 import Control.Monad.Reader
@@ -7,9 +7,16 @@ import Control.Monad.Writer
 import Lambda.Syntax
 
 
---type Context id = [id TermLevel]
---type Subst attr c id = [(id TermLevel, Term attr c id)]
+instance (Eq (id TermLevel)) => Substitute (Gamma attr c id Term Nada Nada) (Term attr c id) where
+    subst ctx (Var attr x) = case lookup x $ termGamma ctx of
+        Nothing -> Var attr x
+        Just e -> e
+    subst ctx c@(Const' _) = c
+    subst ctx (Abs attr x e) = Abs attr x $ subst (delTermGamma x ctx) e
+    subst ctx (App attr e1 e2) = App attr (subst ctx e1) (subst ctx e2)
 
+
+    
 type ScopeError attr id = (attr, id TermLevel)
 scopeCheck :: (Eq (id TermLevel)) => Term attr c id -> [ScopeError attr id]
 scopeCheck e = execWriter (runReaderT (go e) [])
@@ -20,16 +27,3 @@ scopeCheck e = execWriter (runReaderT (go e) [])
     go (Const' _) = pure ()
     go (Abs' x e) = local (x:) (go e)
     go (App' e1 e2) = go e1 >> go e2 >> pure ()
-
-type Subst attr c id = Gamma attr c id Term Nada Nada
-
-subst :: ( Eq (id TermLevel)
-         ) => Subst attr c id
-           -> Term attr c id
-           -> Term attr c id
-subst ctx (Var attr x) = case lookup x $ termGamma ctx of
-    Nothing -> Var attr x
-    Just e -> e
-subst ctx c@(Const' _) = c
-subst ctx (Abs attr x e) = Abs attr x $ subst (delTermGamma x ctx) e
-subst ctx (App attr e1 e2) = App attr (subst ctx e1) (subst ctx e2)

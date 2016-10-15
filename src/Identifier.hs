@@ -1,5 +1,5 @@
 {-#LANGUAGE PatternSynonyms, ViewPatterns,
-            FlexibleInstances,
+            FlexibleInstances, FlexibleContexts,
             GADTs, KindSignatures,
             MultiParamTypeClasses, FunctionalDependencies #-}
 module Identifier where
@@ -156,6 +156,24 @@ addType :: (id TypeLevel, types attr c id) -> Context attr c id terms types kind
 addType add ctx = ctx { gamma = addTypeGamma add $ gamma ctx }
 addKind :: (id KindLevel, kinds attr c id) -> Context attr c id terms types kinds -> Context attr c id terms types kinds
 addKind add ctx = ctx { gamma = addKindGamma add $ gamma ctx }
+
+
+substTerm :: (Substitute (Gamma attr c id terms types kinds) syntax) => (id TermLevel, terms attr c id) -> syntax -> syntax
+substTerm theta e = addTermGamma theta emptyGamma `subst` e
+substType :: (Substitute (Gamma attr c id terms types kinds) syntax) => (id TypeLevel, types attr c id) -> syntax -> syntax
+substType theta t = addTypeGamma theta emptyGamma `subst` t
+substKind :: (Substitute (Gamma attr c id terms types kinds) syntax) => (id KindLevel, kinds attr c id) -> syntax -> syntax
+substKind theta k = addKindGamma theta emptyGamma `subst` k
+
+
+
+-- FIXME make monoid instances for Context, Gamma, Constants
+
+class Substitute theta expr | expr -> theta where
+    subst :: theta -> expr -> expr
+
+
+
 
 -- The datatype `Paramd` is there pure to wrap up types `a :: *` into
 -- type constructors suitable for contexts

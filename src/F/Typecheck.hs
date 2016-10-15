@@ -1,5 +1,5 @@
 {-#LANGUAGE LambdaCase, FlexibleContexts, UndecidableInstances #-}
-module F.Typecheck where
+module F.Typecheck (typeCheck) where
 
 import Data.Maybe
 import Control.Monad.Reader
