@@ -11,7 +11,7 @@ import Identifier
 
 data Term attr c id
     = Var_ attr (id TermLevel)
-    | Const_ attr c
+    | Const_ attr (c TermLevel)
     | Abs_ attr (id TermLevel) (Term attr c id)
     | App_ attr (Term attr c id) (Term attr c id)
 
@@ -20,7 +20,7 @@ instance VarC attr (Term attr c id) (id TermLevel) where
     toVar = Var_
     fromVar (Var_ attr x) = Just (attr, x)
     fromVar _ = Nothing
-instance ConstC attr (Term attr c id) c where
+instance ConstC attr (Term attr c id) (c TermLevel) where
     toConst = Const_
     fromConst (Const_ attr c) = Just (attr, c)
     fromConst _ = Nothing

@@ -2,7 +2,24 @@
             MultiParamTypeClasses, FunctionalDependencies #-}
 module Syntax where
 
-import Const
+
+------ Common Constants ------
+
+class UnitC c where
+    mkUnit :: c
+    isUnit :: c -> Bool
+
+class ArrC c where
+    mkArr :: c
+    isArr :: c -> Bool
+pattern Arr :: (CtorC attr s c t, ArrC c) => attr -> t -> t -> s
+pattern Arr attr a b <- (Ctor attr (isArr -> True) [a, b])
+    where
+    Arr attr a b = Ctor attr mkArr [a, b]
+pattern Arr' a b <- Arr _ a b
+
+
+------ Syntactic Categories ------
 
 class VarC attr s x | s -> x, s -> attr where
     toVar :: attr -> x -> s
@@ -28,11 +45,6 @@ pattern Ctor attr c ts <- (fromCtor -> Just (attr, c, ts))
     where Ctor = toCtor
 pattern Ctor' c ts <- Ctor _ c ts
 
-pattern Arr :: (CtorC attr s op t, ArrC op) => attr -> t -> t -> s
-pattern Arr attr a b <- (Ctor attr (isArr -> True) [a, b])
-    where
-    Arr attr a b = Ctor attr mkArr [a, b]
-pattern Arr' a b <- Arr _ a b
 
 class AbsC attr s x | s -> x, s -> attr where
     toAbs :: attr -> x -> s -> s
@@ -83,6 +95,7 @@ pattern Exists attr a t <- (fromExists -> Just (attr, a, t))
 pattern Exists' a t <- Exists _ a t
 
 
+------ Restrictions of Syntactic Categories ------
 
 class ValueC e v | e -> v where
     toValue :: e -> Maybe v

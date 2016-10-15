@@ -6,18 +6,22 @@ import Data.List (intercalate)
 import F.Syntax
 --FIXME eliminate unnessecary parens
 
-instance (Show (id TermLevel), Show (id TypeLevel), Show c, Show op, ArrC op) =>
-         Show (Term attr c op id) where
+instance ( Show (id TermLevel), Show (id TypeLevel)
+         , Show (c TermLevel), Show (c TypeLevel)
+         , ArrC (c TypeLevel)
+         ) => Show (Term attr c id) where
     show = disp UTop
-instance (Show (id TypeLevel), Show op, ArrC op) => Show (Type attr op id) where
+instance (Show (id TypeLevel), Show (c TypeLevel)
+         , ArrC (c TypeLevel)
+         ) => Show (Type attr c id) where
     show = dispT UTop
 
 data Under = UTop | UAbs | UApp | UArrL | UArrR
 
 
 
-dispT :: (Show (id TypeLevel), Show op, ArrC op) =>
-         Under -> Type attr op id -> String
+dispT :: (Show (id TypeLevel), Show (c TypeLevel), ArrC (c TypeLevel)
+         ) => Under -> Type attr c id -> String
 dispT _ (Var' a) = show a
 dispT UArrL t@(Arr' _ _) = inParens $ dispT UTop t
 dispT _ (Arr' a b) = concat [dispT UArrL a, " -> ", dispT UArrR b]
@@ -28,8 +32,10 @@ dispT UArrR t@(Forall' _ _) = inParens $ dispT UTop t
 dispT UApp t@(Forall' _ _) = inParens $ dispT UTop t
 dispT _ (Forall' a t) = concat ["∀", show a, ". ", dispT UAbs t]
 
-disp :: (Show (id TermLevel), Show (id TypeLevel), Show c, Show op, ArrC op) =>
-        Under -> Term attr c op id -> String
+disp :: ( Show (id TermLevel), Show (id TypeLevel)
+        , Show (c TermLevel), Show (c TypeLevel)
+        , ArrC (c TypeLevel)
+        ) => Under -> Term attr c id -> String
 disp _ (Var' x) = show x
 disp UApp e@(Abs' _ _) = inParens $ disp UTop e
 disp _ (Abs' (x, t@(Forall' _ _)) e) = concat ["λ(", show x, " : ", dispT UTop t, "). ", disp UAbs e]

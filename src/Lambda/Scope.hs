@@ -21,7 +21,10 @@ scopeCheck e = execWriter (runReaderT (go e) [])
     go (Abs' x e) = local (x:) (go e)
     go (App' e1 e2) = go e1 >> go e2 >> pure ()
 
-subst :: (Eq (id TermLevel)) => Subst attr c id -> Term attr c id -> Term attr c id
+subst :: ( Eq (id TermLevel)
+         ) => Subst attr c id 
+           -> Term attr c id
+           -> Term attr c id
 subst ctx (Var attr x) = case lookup x ctx of
     Nothing -> Var attr x
     Just e -> e

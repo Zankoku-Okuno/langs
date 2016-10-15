@@ -7,8 +7,13 @@ import Lambda.Syntax
 import Lambda.Scope
 
 
+type Delta m attr c id =  attr
+                       -> c TermLevel
+                       -> Term attr c id
+                       -> m (Maybe (Term attr c id))
+
 eval :: (Eq (id TermLevel), Monad m) =>
-           (attr -> c -> Term attr c id -> m (Maybe (Term attr c id)))
+           Delta m attr c id
         -> Term attr c id
         -> m (Either (Term attr c id) (Term attr c id))
 eval delta e = do

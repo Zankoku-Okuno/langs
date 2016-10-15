@@ -1,6 +1,7 @@
 {-#LANGUAGE FlexibleContexts #-}
 module F.Parser where
 
+import Data.String (IsString(..))
 import Text.Luthor
 import Text.Luthor.Syntax
 
@@ -9,7 +10,10 @@ import F.Syntax
 -- FIXME change attr from () to some kind of SourceLocation
 
 
-expr :: ArrC op => Parsec String () (Term () c op SourceId)
+expr :: ( ArrC (c TypeLevel)
+        , CtorC () (Type () c SourceId) (c TypeLevel) (Type () c SourceId)
+        , IsString (c TypeLevel)
+        ) => Parsec String () (Term () c SourceId)
 expr = between2 (optional ws) $ do
     f <- inst
     args <- many $ ws *> inst
@@ -38,12 +42,21 @@ expr = between2 (optional ws) $ do
     --mkApp f (Left e) = App () f e
     --mkApp f (Right t) = BigApp () f t
 
-ty :: ArrC op => Parsec String () (Type () op SourceId)
+ty :: ( ArrC (c TypeLevel)
+      , CtorC () (Type () c SourceId) (c TypeLevel) (Type () c SourceId)
+      , IsString (c TypeLevel)
+      ) => Parsec String () (Type () c SourceId)
 ty = between2 (optional ws) $ do
-    t <- atom
-    ts <- many $ between2 (optional ws) (string "->") *> atom
+    t <- app
+    ts <- many $ between2 (optional ws) (string "->") *> app
     pure $ foldr1 (Arr ()) (t:ts)
     where
+    app = _app <||> atom
+        where
+        _app = do
+            c <- fromString <$> upVar
+            ts <- many $ ws *> atom
+            pure $ Ctor () c ts
     atom = inParens ty <||> univ <||> (Var () . TypeId <$> var)
     univ = do
         a <- string "∀" *> (TypeId <$> var)
@@ -51,6 +64,7 @@ ty = between2 (optional ws) $ do
         pure $ Forall () a t
 
 var = charClass "a-zA-Z0-9_" `many1Not` charClass "0-9"
+upVar = charClass "a-zA-Z0-9_" `many1Not` charClass "a-z0-9"
 
 
 

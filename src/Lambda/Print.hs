@@ -4,12 +4,14 @@ module Lambda.Print () where
 import Lambda.Syntax
 
 -- FIXME replace the show instance by just a function that displays ids
-instance (Show (id TermLevel), Show c) => Show (Term attr c id) where
+instance ( Show (id TermLevel), Show (c TermLevel)
+         ) => Show (Term attr c id) where
     show = disp UTop
 
 data Under = UTop | UAbs | UApp
 
-disp :: (Show (id TermLevel), Show c) => Under -> Term attr c id -> String
+disp :: ( Show (id TermLevel), Show (c TermLevel)
+        ) => Under -> Term attr c id -> String
 disp _        (Var' x)     = show x
 disp _        (Const' c)   = show c
 disp UApp abs@(Abs' _ _)   = inParens $ disp UTop abs

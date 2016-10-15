@@ -4,6 +4,7 @@
             MultiParamTypeClasses, FunctionalDependencies #-}
 module Identifier
     ( TermLevel, TypeLevel, KindLevel
+    , C(..)
     , IdC
     , pattern TermId, pattern TypeId, pattern KindId
     , SourceId(..)
@@ -11,10 +12,33 @@ module Identifier
     ) where
 
 
+------ Phantom Types ------
+
 data TermLevel
 data TypeLevel
 data KindLevel
 
+
+------ Constants ------
+
+data C a level where
+    TermC :: a -> C a TermLevel
+    TypeC :: a -> C a TypeLevel
+    KindC :: a -> C a KindLevel
+
+instance Eq a => Eq (C a level) where
+    (TermC x) == (TermC y) = x == y
+    (TypeC a) == (TypeC b) = a == b
+    (KindC k) == (KindC k') = k == k'
+
+instance Show a => Show (C a level) where
+    show (TermC x) = show x
+    show (TypeC a) = show a
+    show (KindC k) = show k
+
+
+------ Identifiers ------
+--FIXME can't these be more like the constants?
 
 class IdC id args | id -> args where
     toTermId :: args -> id TermLevel

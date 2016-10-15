@@ -1,8 +1,10 @@
-{-#LANGUAGE FlexibleInstances #-}
+{-#LANGUAGE FlexibleInstances,
+            GADTs #-}
 module F.MessAround where
 
 
-import Const
+import Data.String (IsString(..))
+
 import F.Parser
 import F.Syntax
 import F.Scope as Scope
@@ -23,15 +25,11 @@ import System.Environment
 
 import F.Unify
 
-instance ArrC String where
-    mkArr = "->"
-    isArr = (== "->")
 
 
 main = do
     files <- getArgs
     aFile `mapM_` files
-    --putStrLn "Goodbyte, cruel world!"
 
 aFile filename = do
     contents <- readFile filename
@@ -42,16 +40,16 @@ aFile filename = do
         Left err -> putStrLn err
         Right (e, e', t) -> do
             print e >> print t >> print e'
-            res <- Lambda.eval (\_ _ _ -> error "no primitive functions for you!") e'
+            let delta _ _ _ = error "no primitive functions for you!"
+            res <- Lambda.eval delta e'
             case res of
                 Left stuck -> putStrLn $ "stuck: " ++ show stuck
                 Right v -> print v
 
--- FIXME kind check (really, make sure that type constructors are only given exactly the number of arguments that they have arity for)
 compile :: String -> SourceName -> Either String
-            ( Term () String String SourceId
-            , Lambda.Term () String SourceId
-            , Type () String SourceId
+            ( Term () (C String) SourceId
+            , Lambda.Term () (C String) SourceId
+            , Type () (C String) SourceId
             )
 compile source from =
     case parse parser from source of
@@ -59,12 +57,22 @@ compile source from =
         Right e -> case scopeCheck scopeCtx0 e of
             errs@(_:_) -> Left $ "Free variables:\n\t" ++ intercalate "\n\t" (show <$> errs)
             [] -> case typeCheck tcCtx0 e of
-                Nothing -> Left "type error"
-                Just t -> Right (e, codegen e, t)
+                Left errs -> Left $ intercalate "\n" (show <$> errs)
+                Right t -> Right (e, codegen e, t)
     where
     parser = (expr <* eof)
 
 scopeCtx0 :: Scope.Context SourceId
 scopeCtx0 = Scope.Ctx [] []
-tcCtx0 :: Tc.Context () String String SourceId
-tcCtx0 = Tc.Ctx [] []
+tcCtx0 :: Tc.Context () (C String) SourceId
+tcCtx0 = Tc.Ctx [] (const Nothing) (flip lookup [(TypeC "->", 2), (TypeC "Int", 0)])
+
+
+
+
+
+instance ArrC (C String TypeLevel) where
+    mkArr = TypeC "->"
+    isArr = (== TypeC "->")
+instance IsString (C String TypeLevel) where
+    fromString = TypeC

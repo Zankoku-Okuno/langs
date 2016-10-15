@@ -11,8 +11,11 @@ import Lambda.Print
 
 import qualified F.MessAround
 
-term :: Term () Int SourceId
-term = App () (App () (Abs () "x" $ Abs () "x" $ Var () "x") (Const () 4)) (Const () 5)
+term :: Term () (C Int) SourceId
+term = App () (App ()
+           (Abs () "x" $ Abs () "x" $ Var () "x")
+           (Const () (TermC 4)))
+           (Const () (TermC 5))
 
 main = do
     print term

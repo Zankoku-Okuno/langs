@@ -15,7 +15,7 @@ data Context id = Ctx
 
 type ScopeError attr id = (attr, Either (id TermLevel) (id TypeLevel))
 scopeCheck :: (Eq (id TermLevel), Eq (id TypeLevel)) =>
-              Context id -> Term attr c op id -> [ScopeError attr id]
+              Context id -> Term attr c id -> [ScopeError attr id]
 scopeCheck ctx0 e = execWriter (goTerm ctx0 e)
     where
     goType ctx (Var attr a)
@@ -37,17 +37,17 @@ scopeCheck ctx0 e = execWriter (goTerm ctx0 e)
         goType ctx t
 
 
-data Subst attr c op id = Subst
-    { termTheta :: [(id TermLevel, Term attr c op id)]
-    , typeTheta :: [(id TypeLevel, Type attr op id)]
+data Subst attr c id = Subst
+    { termTheta :: [(id TermLevel, Term attr c id)]
+    , typeTheta :: [(id TypeLevel, Type attr c id)]
     }
 
 subst :: (Eq (id TermLevel), Eq (id TypeLevel)) =>
-         Subst attr c op id -> Term attr c op id -> Term attr c op id
+         Subst attr c id -> Term attr c id -> Term attr c id
 subst ctx0 e = runReader (goTerm e) ctx0
 
 tySubst :: (Eq (id TypeLevel)) =>
-            Subst attr c op id -> Type attr op id -> Type attr op id
+            Subst attr c id -> Type attr c id -> Type attr c id
 tySubst ctx0 e = runReader (goType e) ctx0
 
 goTerm e@(Var' x) = fromMaybe e <$> asks (lookup x . termTheta)
