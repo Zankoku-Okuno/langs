@@ -11,7 +11,7 @@ import Lambda.Print
 
 import qualified F.MessAround
 
-term :: Term () (C Int) SourceId
+term :: Term () (C Int) (Id StrId)
 term = App () (App ()
            (Abs () "x" $ Abs () "x" $ Var () "x")
            (Const () (TermC 4)))
@@ -26,8 +26,3 @@ main = do
 
 
 delta attr _ _ = putStrLn ("HA!" ++ show attr) >> pure Nothing
-
-
-
-instance IsString (SourceId TermLevel) where
-    fromString = TermId

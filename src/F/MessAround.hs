@@ -47,9 +47,9 @@ aFile filename = do
                 Right v -> print v
 
 compile :: String -> SourceName -> Either String
-            ( Term () (C String) SourceId
-            , Lambda.Term () (C String) SourceId
-            , Type () (C String) SourceId
+            ( Term () (C String) (Id StrId)
+            , Lambda.Term () (C String) (Id StrId)
+            , Type () (C String) (Id StrId)
             )
 compile source from =
     case parse parser from source of
@@ -62,9 +62,9 @@ compile source from =
     where
     parser = (expr <* eof)
 
-scopeCtx0 :: Scope.Context SourceId
+scopeCtx0 :: Scope.Context (Id StrId)
 scopeCtx0 = Scope.Ctx [] []
-tcCtx0 :: Tc.Context () (C String) SourceId
+tcCtx0 :: Tc.Context () (C String) (Id StrId)
 tcCtx0 = Tc.Ctx [] (const Nothing) (flip lookup [(TypeC "->", 2), (TypeC "Int", 0)])
 
 

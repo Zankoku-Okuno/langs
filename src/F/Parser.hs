@@ -11,9 +11,10 @@ import F.Syntax
 
 
 expr :: ( ArrC (c TypeLevel)
-        , CtorC () (Type () c SourceId) (c TypeLevel) (Type () c SourceId)
+        , CtorC () (Type () c id) (c TypeLevel) (Type () c id)
+        , IsString (id TermLevel), IsString (id TypeLevel)
         , IsString (c TypeLevel)
-        ) => Parsec String () (Term () c SourceId)
+        ) => Parsec String () (Term () c id)
 expr = between2 (optional ws) $ do
     f <- inst
     args <- many $ ws *> inst
@@ -23,29 +24,27 @@ expr = between2 (optional ws) $ do
         f <- atom
         ts <- many $ optional ws *> inBrackets ty
         pure $ foldl (BigApp ()) f ts
-    atom = inParens expr <||> abs <||> tyAbs <||> (Var () . TermId <$> var)
+    atom = inParens expr <||> abs <||> tyAbs <||> (Var () . fromString <$> var)
         where
         abs = do
             x <- string "λ" *> annotVar
             e <- string "." *> optional ws *> expr
             pure $ Abs () x e
         tyAbs = do
-            a <- string "Λ" *> (TypeId <$> var)
+            a <- string "Λ" *> (fromString <$> var)
             e <- string "." *> optional ws *> expr
             pure $ BigAbs () a e
     annotVar = do
-        x <- TermId <$> var
+        x <- fromString <$> var
         optional ws >> string ":" >> optional ws
         t <- ty
         pure (x, t)
 
-    --mkApp f (Left e) = App () f e
-    --mkApp f (Right t) = BigApp () f t
 
 ty :: ( ArrC (c TypeLevel)
-      , CtorC () (Type () c SourceId) (c TypeLevel) (Type () c SourceId)
-      , IsString (c TypeLevel)
-      ) => Parsec String () (Type () c SourceId)
+      , CtorC () (Type () c id) (c TypeLevel) (Type () c id)
+      , IsString (id TypeLevel), IsString (c TypeLevel)
+      ) => Parsec String () (Type () c id)
 ty = between2 (optional ws) $ do
     t <- app
     ts <- many $ between2 (optional ws) (string "->") *> app
@@ -57,9 +56,9 @@ ty = between2 (optional ws) $ do
             c <- fromString <$> upVar
             ts <- many $ ws *> atom
             pure $ Ctor () c ts
-    atom = inParens ty <||> univ <||> (Var () . TypeId <$> var)
+    atom = inParens ty <||> univ <||> (Var () . fromString <$> var)
     univ = do
-        a <- string "∀" *> (TypeId <$> var)
+        a <- string "∀" *> (fromString <$> var)
         t <- string "." *> optional ws *> ty
         pure $ Forall () a t
 
