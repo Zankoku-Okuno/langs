@@ -1,4 +1,4 @@
-{-#LANGUAGE FlexibleInstances, FlexibleContexts, MultiParamTypeClasses #-}
+{-#LANGUAGE FlexibleInstances, FlexibleContexts, MultiParamTypeClasses, PolyKinds #-}
 module Lambda.Scope where
 
 import Control.Monad.Reader
@@ -8,7 +8,7 @@ import Lambda.Syntax
 
 
 instance (Eq (id TermLevel)) => Substitute (Gamma attr c id Term Nada Nada) (Term attr c id) where
-    subst ctx (Var attr x) = case lookup x $ terms ctx of
+    subst ctx (Var attr x) = case ctx `getTerm` x of
         Nothing -> Var attr x
         Just e -> e
     subst ctx c@(Const' _) = c
@@ -17,6 +17,7 @@ instance (Eq (id TermLevel)) => Substitute (Gamma attr c id Term Nada Nada) (Ter
 
 
     
+--FIXME use the Gamma stuff from Identifier
 type ScopeError attr id = (attr, id TermLevel)
 scopeCheck :: (Eq (id TermLevel)) => Term attr c id -> [ScopeError attr id]
 scopeCheck e = execWriter (runReaderT (go e) [])

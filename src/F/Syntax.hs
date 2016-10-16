@@ -38,30 +38,6 @@ instance MonotypeC (Type attr c id) (Type attr c id) where
     fromMonotype = id
 
 
---instance Bind (Type op) where
---    scopeCheck (TVar sid) = identFor sid >>= \case
---        Nothing -> do
---            scopeError sid
---            pure $ TVar undefined
---        Just id -> pure $ TVar id
---    scopeCheck (TCon c ts) = TCon c <$> scopeCheck `mapM` ts
---    scopeCheck (Univ sid t) = withFresh sid $ \id ->
---        Univ id <$> scopeCheck t
-
---    fv (TVar a) = [a]
---    fv (TCon _ ts) = foldr union [] $ fv <$> ts
---    fv (Univ id t) = delete id $ fv t
-
---    type Subst (Type op) id = [(id, Type op id)]
---    subst theta (TVar a) = case lookup a theta of
---        Nothing -> TVar a
---        Just t -> t
---    subst theta (TCon c ts) = TCon c $ subst theta <$> ts
---    subst theta (Univ a t) = Univ a (subst theta' t)
---        where theta' = filter ((/= a) . fst) theta
-
-
-
 
 
 data Term attr c id
@@ -96,53 +72,3 @@ instance BigAppC attr (Term attr c id) (Type attr c id) where
     toBigApp = BigApp_
     fromBigApp (BigApp_ attr e t) = Just (attr, e, t)
     fromBigApp _ = Nothing
-
-
-
---instance Bind (Term c op) where
---    scopeCheck (Var sid) = identFor sid >>= \case
---        Nothing -> do
---            scopeError sid
---            pure $ Var undefined
---        Just id -> pure $ Var id
---    scopeCheck (Con c) = pure (Con c)
---    scopeCheck (Abs (sid, t) e) = do
---        t' <- scopeCheck t
---        withFresh sid $ \x -> do
---            e' <- scopeCheck e
---            pure $ Abs (x, t') e'
---    scopeCheck (App e1 e2) = App <$> scopeCheck e1 <*> scopeCheck e2
---    scopeCheck (TyAbs sid e) = withFresh sid $ \a -> do
---        e' <- scopeCheck e
---        pure $ TyAbs a e'
---    scopeCheck (TyApp e t) = TyApp <$> scopeCheck e <*> scopeCheck t
-
---    fv (Var x) = [x]
---    fv (Con _) = []
---    fv (Abs (x, _) e) = delete x $ fv e
---    fv (App e1 e2) = fv e1 `union` fv e2
---    fv (TyAbs a e) = delete a $ fv e
---    fv (TyApp e t) = fv e `union` fv t
-
---    type Subst (Term c op) id = ([(id, Term c op id)], [(id, Type op id)])
---    subst theta (Var x) = case lookup x (fst theta) of
---        Nothing -> Var x
---        Just e -> e
---    subst theta (Con c) = Con c
---    subst theta (Abs (x, t) e) = Abs (x, subst (snd theta) t) (subst theta' e)
---        where theta' = (filter ((/= x) . fst) $ fst theta, snd theta)
---    subst theta (App e1 e2) = App (subst theta e1) (subst theta e2)
---    subst theta (TyAbs a e) = TyAbs a (subst theta' e)
---        where theta' = (fst theta, filter ((/= a) . fst) $ snd theta)
---    subst theta (TyApp e t) = TyApp (subst theta e) (subst (snd theta) t)
-
---ftv :: (Eq id) => Term c op id -> [id]
---ftv (Var _) = []
---ftv (Con _) = []
---ftv (Abs (_, t) e) = fv t `union` ftv e
---ftv (App e1 e2) = ftv e1 `union` ftv e2
-
-
-
-
-

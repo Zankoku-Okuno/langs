@@ -17,6 +17,7 @@ module Identifier
     ) where
 
 
+import Data.Maybe
 import Data.String (IsString(..))
 import Data.Monoid
 import Control.Applicative
@@ -157,10 +158,24 @@ class IsGamma g where
     types :: g attr c id terms types kinds -> [(id TypeLevel, types attr c id)]
     kinds :: g attr c id terms types kinds -> [(id KindLevel, kinds attr c id)]
     
+    getTerm :: (Eq (id TermLevel)) => g attr c id terms types kinds -> id TermLevel -> Maybe (terms attr c id)
+    getTerm theta id = lookup id $ terms theta
+    getType :: (Eq (id TypeLevel)) => g attr c id terms types kinds -> id TypeLevel -> Maybe (types attr c id)
+    getType theta id = lookup id $ types theta
+    getKind :: (Eq (id KindLevel)) => g attr c id terms types kinds -> id KindLevel -> Maybe (kinds attr c id)
+    getKind theta id = lookup id $ kinds theta
+
+    hasTerm :: (Eq (id TermLevel)) => g attr c id terms types kinds -> id TermLevel -> Bool
+    hasTerm theta id = isJust $ getTerm theta id
+    hasType :: (Eq (id TypeLevel)) => g attr c id terms types kinds -> id TypeLevel -> Bool
+    hasType theta id = isJust $ getType theta id
+    hasKind :: (Eq (id KindLevel)) => g attr c id terms types kinds -> id KindLevel -> Bool
+    hasKind theta id = isJust $ getKind theta id
+
     addTerm :: (id TermLevel, terms attr c id) -> g attr c id terms types kinds -> g attr c id terms types kinds
     addType :: (id TypeLevel, types attr c id) -> g attr c id terms types kinds -> g attr c id terms types kinds
     addKind :: (id KindLevel, kinds attr c id) -> g attr c id terms types kinds -> g attr c id terms types kinds
-    -- FIXME can I eliminate the Eq constraint here?
+    
     delTerm :: (Eq (id TermLevel)) => id TermLevel -> g attr c id terms types kinds -> g attr c id terms types kinds
     delType :: (Eq (id TypeLevel)) => id TypeLevel -> g attr c id terms types kinds -> g attr c id terms types kinds
     delKind :: (Eq (id KindLevel)) => id KindLevel -> g attr c id terms types kinds -> g attr c id terms types kinds
@@ -219,3 +234,7 @@ substKind theta k = addKind theta mempty `subst` k
 data Paramd a attr (c :: * -> *) (id :: * -> *) = Paramd a
 type Nada = Paramd ()
 pattern Nada = Paramd ()
+
+
+
+-- FIXME stuf to get free variables

@@ -3,7 +3,6 @@ module Lambda.Print () where
 
 import Lambda.Syntax
 
--- FIXME replace the show instance by just a function that displays ids
 instance ( Show (id TermLevel), Show (c TermLevel)
          ) => Show (Term attr c id) where
     show = disp UTop

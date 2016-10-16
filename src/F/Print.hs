@@ -4,7 +4,7 @@ module F.Print () where
 import Data.List (intercalate)
 
 import F.Syntax
---FIXME eliminate unnessecary parens
+
 
 instance ( Show (id TermLevel), Show (id TypeLevel)
          , Show (c TermLevel), Show (c TypeLevel)

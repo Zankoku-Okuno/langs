@@ -50,7 +50,7 @@ checkType :: ( Eq (id TermLevel), Eq (id TypeLevel)
              , ArrC (c TypeLevel)
              ) => Term attr c id -> Tc attr c id (Maybe (Type attr c id))
 checkType e0@(Var' x) = do
-    t <- asks (lookup x . terms)
+    t <- asks (`getTerm` x)
     when (isNothing t) $ tell [TermScope e0 x]
     pure t
 checkType e0@(Const' c) = do
@@ -88,7 +88,7 @@ checkType e0@(BigApp' e t) = do
 
 checkKind :: (Eq (id TypeLevel), Eq (c TypeLevel)) => Type attr c id -> Tc attr c id (Maybe ())
 checkKind t0@(Var' a) = do
-    k <- asks ((const () <$>) . lookup a . types)
+    k <- asks ((const () <$>) . (`getType` a))
     when (isNothing k) $ tell [TypeScope t0 a]
     pure k
 checkKind t0@(Ctor' c ts) = do

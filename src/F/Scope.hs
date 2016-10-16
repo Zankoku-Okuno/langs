@@ -10,7 +10,7 @@ import F.Syntax
 
 instance (Eq (id TermLevel), Eq (id TypeLevel)) => Substitute (Gamma attr c id Term Type Nada) (Term attr c id) where
     subst ctx0 e = runReader (goTerm e) ctx0
-goTerm e@(Var' x) = fromMaybe e <$> asks (lookup x . terms)
+goTerm e@(Var' x) = fromMaybe e <$> asks (`getTerm` x)
 goTerm c@(Const' _) = pure c
 goTerm (Abs attr (x, t) e) = do
     t' <- goType t
@@ -25,7 +25,7 @@ goTerm (BigApp attr e t) = BigApp attr <$> goTerm e <*> goType t
 
 instance (Eq (id TypeLevel)) => Substitute (Gamma attr c id Term Type Nada) (Type attr c id) where
     subst ctx0 t = runReader (goType t) ctx0
-goType t@(Var' a) = fromMaybe t <$> asks (lookup a . types)
+goType t@(Var' a) = fromMaybe t <$> asks (`getType` a)
 goType (Ctor attr c ts) = Ctor attr c <$> (goType `mapM` ts)
 goType (Forall attr a t) = do
     t' <- local (delType a) $ goType t
