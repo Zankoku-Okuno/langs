@@ -4,9 +4,10 @@ module F.Typecheck (typeCheck) where
 import Data.Maybe
 import Control.Monad.Reader
 
+import Context
 import F.Syntax
 import F.Unify
-import F.Scope hiding (Gamma(..))
+import F.Scope
 
 import Control.Monad.Writer
 

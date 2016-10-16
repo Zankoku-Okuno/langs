@@ -3,6 +3,7 @@ module Lambda.Interpreter
     ( eval
     ) where
 
+import Scope
 import Lambda.Syntax
 import Lambda.Scope
 

@@ -7,6 +7,7 @@ import Data.String (IsString(..))
 
 import F.Parser
 import F.Syntax
+import Context
 import F.Scope as Scope
 import F.Typecheck as Tc
 import qualified Lambda.Syntax as Lambda

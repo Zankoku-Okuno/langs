@@ -1,5 +1,6 @@
 module F.Unify where
 
+import Scope
 import F.Syntax
 import F.Scope
 

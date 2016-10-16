@@ -5,6 +5,8 @@ import Data.Maybe (fromMaybe)
 import Control.Monad.Reader
 import Control.Monad.Writer
 
+import Context
+import Scope
 import F.Syntax
 
 

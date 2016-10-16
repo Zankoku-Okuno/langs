@@ -4,6 +4,8 @@ module Lambda.Scope where
 import Control.Monad.Reader
 import Control.Monad.Writer
 
+import Context
+import Scope
 import Lambda.Syntax
 
 
