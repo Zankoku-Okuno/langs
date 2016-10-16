@@ -63,8 +63,8 @@ compile source from =
 
 ctx0 :: Context () (C String) (Id StrId) Type (Paramd Int) Nada
 ctx0 = Ctx
-    { gamma = emptyGamma
-    , constants = emptyConstants { typeConstants = flip lookup
+    { gamma = mempty
+    , constants = mempty { typeConstants = flip lookup
             [ (TypeC "->", Paramd 2)
             , (TypeC "Int", Paramd 0)
             ]

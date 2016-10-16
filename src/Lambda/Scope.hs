@@ -8,11 +8,11 @@ import Lambda.Syntax
 
 
 instance (Eq (id TermLevel)) => Substitute (Gamma attr c id Term Nada Nada) (Term attr c id) where
-    subst ctx (Var attr x) = case lookup x $ termGamma ctx of
+    subst ctx (Var attr x) = case lookup x $ terms ctx of
         Nothing -> Var attr x
         Just e -> e
     subst ctx c@(Const' _) = c
-    subst ctx (Abs attr x e) = Abs attr x $ subst (delTermGamma x ctx) e
+    subst ctx (Abs attr x e) = Abs attr x $ subst (delTerm x ctx) e
     subst ctx (App attr e1 e2) = App attr (subst ctx e1) (subst ctx e2)
 
 

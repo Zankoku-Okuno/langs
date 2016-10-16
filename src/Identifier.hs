@@ -1,11 +1,25 @@
 {-#LANGUAGE PatternSynonyms, ViewPatterns,
             FlexibleInstances, FlexibleContexts,
-            GADTs, KindSignatures,
+            GADTs, PolyKinds,
             MultiParamTypeClasses, FunctionalDependencies #-}
-module Identifier where
+module Identifier
+    ( TermLevel, TypeLevel, KindLevel
+    , C(..)
+    , Id(..)
+    , StrId(..)
+    , Gamma, IsGamma(..)
+    , Constants(..)
+    , Context(..)
+    , Substitute(..), Paramd(..), Nada(..)
+    , substTerm, substType, substKind
+    -- FIXME these should be in a class
+    , termConsts, typeConsts
+    ) where
 
 
 import Data.String (IsString(..))
+import Data.Monoid
+import Control.Applicative
 
 ------ Phantom Types ------
 
@@ -96,27 +110,18 @@ data Gamma attr (c :: * -> *) (id :: * -> *) terms types kinds = Gamma
     , typeGamma :: [(id TypeLevel, types attr c id)]
     , kindGamma :: [(id KindLevel, kinds attr c id)]
     }
-emptyGamma :: Gamma attr c id terms types kinds
-emptyGamma = Gamma
-    { termGamma = []
-    , typeGamma = []
-    , kindGamma = []
-    }
 
--- FIXME make a contexty class with addX, delX, hasX, getX
-addTermGamma :: (id TermLevel, terms attr c id) -> Gamma attr c id terms types kinds -> Gamma attr c id terms types kinds
-addTermGamma add theta0 = theta0 { termGamma = add : termGamma theta0 }
-addTypeGamma :: (id TypeLevel, types attr c id) -> Gamma attr c id terms types kinds -> Gamma attr c id terms types kinds
-addTypeGamma add theta0 = theta0 { typeGamma = add : typeGamma theta0 }
-addKindGamma :: (id KindLevel, kinds attr c id) -> Gamma attr c id terms types kinds -> Gamma attr c id terms types kinds
-addKindGamma add theta0 = theta0 { kindGamma = add : kindGamma theta0 }
-
-delTermGamma :: Eq (id TermLevel) => id TermLevel -> Gamma attr c id terms types kinds -> Gamma attr c id terms types kinds
-delTermGamma del theta0 = theta0 { termGamma = [ it | it <- termGamma theta0, fst it /= del] }
-delTypeGamma :: Eq (id TypeLevel) => id TypeLevel -> Gamma attr c id terms types kinds -> Gamma attr c id terms types kinds
-delTypeGamma del theta0 = theta0 { typeGamma = [ it | it <- typeGamma theta0, fst it /= del] }
-delKindGamma :: Eq (id KindLevel) => id KindLevel -> Gamma attr c id terms types kinds -> Gamma attr c id terms types kinds
-delKindGamma del theta0 = theta0 { kindGamma = [ it | it <- kindGamma theta0, fst it /= del] }
+instance Monoid (Gamma attr c id terms types kinds) where
+    mempty = Gamma
+        { termGamma = []
+        , typeGamma = []
+        , kindGamma = []
+        }
+    a `mappend` b = Gamma
+        { termGamma = termGamma a <> termGamma b
+        , typeGamma = typeGamma a <> typeGamma b
+        , kindGamma = kindGamma a <> kindGamma b
+        }
 
 
 data Constants attr (c :: * -> *) (id :: * -> *) terms types kinds = Constants
@@ -124,54 +129,87 @@ data Constants attr (c :: * -> *) (id :: * -> *) terms types kinds = Constants
     , typeConstants :: c TypeLevel -> Maybe (types attr c id)
     , kindConstants :: c KindLevel -> Maybe (kinds attr c id)
     }
-emptyConstants :: Constants attr c id terms types kinds
-emptyConstants = Constants
-    { termConstants = const Nothing
-    , typeConstants = const Nothing
-    , kindConstants = const Nothing
-    }
+
+instance Monoid (Constants attr c id terms types kinds) where
+    mempty = Constants
+        { termConstants = const Nothing
+        , typeConstants = const Nothing
+        , kindConstants = const Nothing
+        }
+    a `mappend` b = Constants
+        { termConstants = \c -> termConstants a c <|> termConstants b c
+        , typeConstants = \c -> typeConstants a c <|> typeConstants b c
+        , kindConstants = \c -> kindConstants a c <|> kindConstants b c
+        }
 
 
 data Context attr c id terms types kinds = Ctx
     { gamma :: Gamma attr c id terms types kinds
     , constants :: Constants attr c id terms types kinds
     }
-emptyContext :: Context attr c id terms types kinds
-emptyContext = Ctx
-    { gamma = emptyGamma
-    , constants = emptyConstants
-    }
+instance Monoid (Context attr c id terms types kinds) where
+    mempty = Ctx mempty mempty
+    (Ctx g1 c1) `mappend` (Ctx g2 c2) = Ctx (g1 <> g2) (c1 <> c2)
 
-terms = termGamma . gamma
-types = typeGamma . gamma
-kinds = kindGamma . gamma
+
+class IsGamma g where
+    terms :: g attr c id terms types kinds -> [(id TermLevel, terms attr c id)]
+    types :: g attr c id terms types kinds -> [(id TypeLevel, types attr c id)]
+    kinds :: g attr c id terms types kinds -> [(id KindLevel, kinds attr c id)]
+    
+    addTerm :: (id TermLevel, terms attr c id) -> g attr c id terms types kinds -> g attr c id terms types kinds
+    addType :: (id TypeLevel, types attr c id) -> g attr c id terms types kinds -> g attr c id terms types kinds
+    addKind :: (id KindLevel, kinds attr c id) -> g attr c id terms types kinds -> g attr c id terms types kinds
+    -- FIXME can I eliminate the Eq constraint here?
+    delTerm :: (Eq (id TermLevel)) => id TermLevel -> g attr c id terms types kinds -> g attr c id terms types kinds
+    delType :: (Eq (id TypeLevel)) => id TypeLevel -> g attr c id terms types kinds -> g attr c id terms types kinds
+    delKind :: (Eq (id KindLevel)) => id KindLevel -> g attr c id terms types kinds -> g attr c id terms types kinds
+    
+    -- TODO hasTerm, getTerm
+
+instance IsGamma Gamma where
+    terms = termGamma
+    types = typeGamma
+    kinds = kindGamma
+
+    addTerm add theta0 = theta0 { termGamma = add : termGamma theta0 }
+    addType add theta0 = theta0 { typeGamma = add : typeGamma theta0 }
+    addKind add theta0 = theta0 { kindGamma = add : kindGamma theta0 }
+
+    delTerm del theta0 = theta0 { termGamma = [ it | it <- termGamma theta0, fst it /= del] }
+    delType del theta0 = theta0 { typeGamma = [ it | it <- typeGamma theta0, fst it /= del] }
+    delKind del theta0 = theta0 { kindGamma = [ it | it <- kindGamma theta0, fst it /= del] }
+
+instance IsGamma Context where
+    terms = termGamma . gamma
+    types = typeGamma . gamma
+    kinds = kindGamma . gamma
+
+    addTerm add ctx = ctx { gamma = addTerm add $ gamma ctx }
+    addType add ctx = ctx { gamma = addType add $ gamma ctx }
+    addKind add ctx = ctx { gamma = addKind add $ gamma ctx }
+
+    delTerm del theta0 = theta0 { gamma = delTerm del (gamma theta0) }
+    delType del theta0 = theta0 { gamma = delType del (gamma theta0) }
+    delKind del theta0 = theta0 { gamma = delKind del (gamma theta0) }
+
 
 termConsts = termConstants . constants
 typeConsts = typeConstants . constants
 kindConsts = kindConstants . constants
 
-addTerm :: (id TermLevel, terms attr c id) -> Context attr c id terms types kinds -> Context attr c id terms types kinds
-addTerm add ctx = ctx { gamma = addTermGamma add $ gamma ctx }
-addType :: (id TypeLevel, types attr c id) -> Context attr c id terms types kinds -> Context attr c id terms types kinds
-addType add ctx = ctx { gamma = addTypeGamma add $ gamma ctx }
-addKind :: (id KindLevel, kinds attr c id) -> Context attr c id terms types kinds -> Context attr c id terms types kinds
-addKind add ctx = ctx { gamma = addKindGamma add $ gamma ctx }
 
-
-substTerm :: (Substitute (Gamma attr c id terms types kinds) syntax) => (id TermLevel, terms attr c id) -> syntax -> syntax
-substTerm theta e = addTermGamma theta emptyGamma `subst` e
-substType :: (Substitute (Gamma attr c id terms types kinds) syntax) => (id TypeLevel, types attr c id) -> syntax -> syntax
-substType theta t = addTypeGamma theta emptyGamma `subst` t
-substKind :: (Substitute (Gamma attr c id terms types kinds) syntax) => (id KindLevel, kinds attr c id) -> syntax -> syntax
-substKind theta k = addKindGamma theta emptyGamma `subst` k
-
-
-
--- FIXME make monoid instances for Context, Gamma, Constants
+------ Substitution ------
 
 class Substitute theta expr | expr -> theta where
     subst :: theta -> expr -> expr
 
+substTerm :: (Substitute (Gamma attr c id terms types kinds) syntax) => (id TermLevel, terms attr c id) -> syntax -> syntax
+substTerm theta e = addTerm theta mempty `subst` e
+substType :: (Substitute (Gamma attr c id terms types kinds) syntax) => (id TypeLevel, types attr c id) -> syntax -> syntax
+substType theta t = addType theta mempty `subst` t
+substKind :: (Substitute (Gamma attr c id terms types kinds) syntax) => (id KindLevel, kinds attr c id) -> syntax -> syntax
+substKind theta k = addKind theta mempty `subst` k
 
 
 
