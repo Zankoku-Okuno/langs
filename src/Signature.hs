@@ -1,6 +1,6 @@
 {-#LANGUAGE FlexibleInstances, FlexibleContexts,
             GADTs #-}
-module Identifier
+module Signature
     ( TermLevel, TypeLevel, KindLevel
     , C(..)
     , Id(..)

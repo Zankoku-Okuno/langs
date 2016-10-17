@@ -3,11 +3,11 @@
             MultiParamTypeClasses #-}
 module F.Syntax
     ( Type, Term
-    , module Identifier
+    , module Signature
     , module Syntax
     ) where
 
-import Identifier
+import Signature
 import Syntax
 
 

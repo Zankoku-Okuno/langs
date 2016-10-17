@@ -12,7 +12,7 @@ import Data.Maybe (isJust)
 import Data.Monoid
 import Control.Applicative
 
-import Identifier
+import Signature
 
 
 data Context attr c id terms types kinds = Ctx

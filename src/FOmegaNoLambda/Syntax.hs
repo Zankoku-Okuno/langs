@@ -1,11 +1,11 @@
 {-#LANGUAGE PolyKinds, FlexibleInstances, MultiParamTypeClasses #-}
 module FOmegaNoLambda.Syntax
     ( Term, Type, Kind
-    , module Identifier
+    , module Signature
     , module Syntax
     ) where
 
-import Identifier
+import Signature
 import Syntax
 
 

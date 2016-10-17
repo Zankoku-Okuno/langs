@@ -1,12 +1,12 @@
 {-#LANGUAGE FlexibleInstances, FlexibleContexts, MultiParamTypeClasses #-}
 module Lambda.Syntax
     ( Term
-    , module Identifier
+    , module Signature
     , module Syntax
     ) where
 
+import Signature
 import Syntax
-import Identifier
 
 
 data Term attr c id

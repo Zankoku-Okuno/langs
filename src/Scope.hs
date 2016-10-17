@@ -1,7 +1,7 @@
 {-#LANGUAGE FlexibleContexts, MultiParamTypeClasses, FunctionalDependencies #-}
 module Scope where
 
-import Identifier
+import Signature
 import Context
 
 
