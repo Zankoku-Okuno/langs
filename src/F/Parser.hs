@@ -10,7 +10,7 @@ import F.Syntax
 -- FIXME change attr from () to some kind of SourceLocation
 
 
-expr :: ( ArrC (c TypeLevel)
+expr :: ( ArrC () (Type () c id)
         , CtorC () (Type () c id) (c TypeLevel) (Type () c id)
         , IsString (id TermLevel), IsString (id TypeLevel)
         , IsString (c TypeLevel)
@@ -41,7 +41,7 @@ expr = between2 (optional ws) $ do
         pure (x, t)
 
 
-ty :: ( ArrC (c TypeLevel)
+ty :: ( ArrC () (Type () c id)
       , CtorC () (Type () c id) (c TypeLevel) (Type () c id)
       , IsString (id TypeLevel), IsString (c TypeLevel)
       ) => Parsec String () (Type () c id)

@@ -1,4 +1,4 @@
-{-#LANGUAGE FlexibleInstances,
+{-#LANGUAGE FlexibleInstances, MultiParamTypeClasses,
             GADTs #-}
 module F.MessAround where
 
@@ -76,8 +76,9 @@ ctx0 = Ctx
 
 
 
-instance ArrC (C String TypeLevel) where
-    mkArr = TypeC "->"
-    isArr = (== TypeC "->")
+instance ArrC attr (Type attr (C String) id) where
+    toArr attr a b = Ctor attr (TypeC "->") [a, b]
+    fromArr (Ctor attr (TypeC "->") [a, b]) = Just (attr, a, b)
+    fromArr _ = Nothing
 instance IsString (C String TypeLevel) where
     fromString = TypeC

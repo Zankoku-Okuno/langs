@@ -11,6 +11,10 @@ import Lambda.Print
 
 import qualified F.MessAround
 
+import qualified FOmegaNoLambda.Syntax
+import qualified FOmegaNoLambda.Scope
+import qualified FOmegaNoLambda.Print
+
 term :: Term () (C Int) (Id StrId)
 term = App () (App ()
            (Abs () "x" $ Abs () "x" $ Var () "x")

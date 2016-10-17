@@ -1,4 +1,5 @@
-{-#LANGUAGE FlexibleInstances, GADTs #-}
+{-#LANGUAGE FlexibleInstances, FlexibleContexts, UndecidableInstances
+            , GADTs #-}
 module F.Print () where
 
 import Data.List (intercalate)
@@ -8,11 +9,11 @@ import F.Syntax
 
 instance ( Show (id TermLevel), Show (id TypeLevel)
          , Show (c TermLevel), Show (c TypeLevel)
-         , ArrC (c TypeLevel)
+         , ArrC attr (Type attr c id)
          ) => Show (Term attr c id) where
     show = disp UTop
 instance (Show (id TypeLevel), Show (c TypeLevel)
-         , ArrC (c TypeLevel)
+         , ArrC attr (Type attr c id)
          ) => Show (Type attr c id) where
     show = dispT UTop
 
@@ -20,7 +21,7 @@ data Under = UTop | UAbs | UApp | UArrL | UArrR
 
 
 
-dispT :: (Show (id TypeLevel), Show (c TypeLevel), ArrC (c TypeLevel)
+dispT :: (Show (id TypeLevel), Show (c TypeLevel), ArrC attr (Type attr c id)
          ) => Under -> Type attr c id -> String
 dispT _ (Var' a) = show a
 dispT UArrL t@(Arr' _ _) = inParens $ dispT UTop t
@@ -34,7 +35,7 @@ dispT _ (Forall' a t) = concat ["∀", show a, ". ", dispT UAbs t]
 
 disp :: ( Show (id TermLevel), Show (id TypeLevel)
         , Show (c TermLevel), Show (c TypeLevel)
-        , ArrC (c TypeLevel)
+        , ArrC attr (Type attr c id)
         ) => Under -> Term attr c id -> String
 disp _ (Var' x) = show x
 disp UApp e@(Abs' _ _) = inParens $ disp UTop e

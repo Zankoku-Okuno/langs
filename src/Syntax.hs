@@ -5,17 +5,13 @@ module Syntax where
 
 ------ Common Constants ------
 
-class UnitC c where
-    mkUnit :: c
-    isUnit :: c -> Bool
-
-class ArrC c where
-    mkArr :: c
-    isArr :: c -> Bool
-pattern Arr :: (CtorC attr s c t, ArrC c) => attr -> t -> t -> s
-pattern Arr attr a b <- (Ctor attr (isArr -> True) [a, b])
+class ArrC attr s | s -> attr where
+    toArr :: attr -> s -> s -> s
+    fromArr :: s -> Maybe (attr, s, s)
+pattern Arr :: (ArrC attr s) => attr -> s -> s -> s
+pattern Arr attr a b <- (fromArr -> Just (attr, a, b))
     where
-    Arr attr a b = Ctor attr mkArr [a, b]
+    Arr = toArr
 pattern Arr' a b <- Arr _ a b
 
 

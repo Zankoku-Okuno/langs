@@ -1,3 +1,4 @@
+{-#LANGUAGE FlexibleContexts, FlexibleInstances #-}
 module F.Unify where
 
 import Scope
@@ -27,7 +28,7 @@ tyEquiv _ _ = False
 
 
 unifyFun :: ( Eq (id TermLevel), Eq (id TypeLevel)
-            , Eq (c TypeLevel), ArrC (c TypeLevel)
+            , Eq (c TypeLevel), ArrC attr (Type attr c id)
             ) => Type attr c id -> Type attr c id -> Maybe (Type attr c id)
 unifyFun (Arr' t1 t2) t1' | t1 `tyEquiv` t1' = Just t2
 unifyFun _ _ = Nothing

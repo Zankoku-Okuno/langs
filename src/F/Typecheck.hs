@@ -37,7 +37,7 @@ type Tc attr c id a = ReaderT (Context attr c id Type (Paramd Int) Nada)
 
 typeCheck :: ( Eq (id TermLevel), Eq (id TypeLevel)
              , Eq (c TermLevel), Eq (c TypeLevel)
-             , ArrC (c TypeLevel)
+             , ArrC attr (Type attr c id)
              ) => Context attr c id Type (Paramd Int) Nada
                -> Term attr c id
                -> Either [TcError attr c id] (Type attr c id)
@@ -48,7 +48,7 @@ typeCheck ctx0 e = case runWriter $ runReaderT (checkType e) ctx0 of
 
 checkType :: ( Eq (id TermLevel), Eq (id TypeLevel)
              , Eq (c TermLevel), Eq (c TypeLevel)
-             , ArrC (c TypeLevel)
+             , ArrC attr (Type attr c id)
              ) => Term attr c id -> Tc attr c id (Maybe (Type attr c id))
 checkType e0@(Var' x) = do
     t <- asks (`getTerm` x)
