@@ -1,0 +1,2 @@
+Λf:* -> *.λ(map:∀a:*.∀b:*.(a -> b) -> f a -> f b).
+    Λa:*.Λb:*. λ(f:a -> b).λ(xs:f a). map[a][b] f xs

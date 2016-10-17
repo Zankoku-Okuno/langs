@@ -1,13 +1,14 @@
-{-#LANGUAGE FlexibleInstances, MultiParamTypeClasses,
-            GADTs #-}
+{-#LANGUAGE FlexibleInstances, MultiParamTypeClasses, GADTs #-}
 module F.MessAround where
 
 
+import System.Environment
 import Data.String (IsString(..))
+import Data.List (intercalate, isSuffixOf)
 
+import Context
 import F.Parser
 import F.Syntax
-import Context
 import F.Scope as Scope
 import F.Typecheck as Tc
 import qualified Lambda.Syntax as Lambda
@@ -17,19 +18,16 @@ import F.CodeGen.Lambda
 import F.Print
 import Lambda.Print
 
-import Data.List (intercalate)
 import Text.Luthor
 import Text.Luthor.Syntax
 import Text.Parsec.Combinator (eof)
-import System.Environment
-
 
 import F.Unify
 
 
 
 main = do
-    files <- getArgs
+    files <- filter (".f" `isSuffixOf`) <$> getArgs
     aFile `mapM_` files
 
 aFile filename = do

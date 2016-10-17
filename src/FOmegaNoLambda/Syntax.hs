@@ -9,7 +9,7 @@ import Signature
 import Syntax
 
 
-data Kind attr c id
+data Kind attr c (id :: * -> *)
     = KCtor_ attr (c KindLevel) [Kind attr c id]
 
 instance CtorC attr (Kind attr c id) (c KindLevel) (Kind attr c id) where

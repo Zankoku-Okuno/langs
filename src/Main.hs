@@ -10,10 +10,7 @@ import Lambda.Interpreter
 import Lambda.Print
 
 import qualified F.MessAround
-
-import qualified FOmegaNoLambda.Syntax
-import qualified FOmegaNoLambda.Scope
-import qualified FOmegaNoLambda.Print
+import qualified FOmegaNoLambda.MessAround
 
 term :: Term () (C Int) (Id StrId)
 term = App () (App ()
@@ -27,6 +24,7 @@ main = do
         [] -> print =<< eval delta term
         errs -> mapM_ (putStrLn . ("scope error: " ++)) (show <$> errs)
     F.MessAround.main
+    FOmegaNoLambda.MessAround.main
 
 
 delta attr _ _ = putStrLn ("HA!" ++ show attr) >> pure Nothing
