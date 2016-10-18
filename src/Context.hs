@@ -4,7 +4,7 @@ module Context
     , Context(..)
     -- FIXME these should be in a class
     , Constants(..)
-    , termConsts, typeConsts
+    , termConsts, typeConsts, kindConsts
     , Paramd(..), Nada, pattern Nada
     ) where
 

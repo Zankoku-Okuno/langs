@@ -6,29 +6,30 @@ import Control.Monad.Reader
 
 import Context
 import F.Syntax
-import F.Unify
 import F.Scope
+import F.Unify
 
 import Control.Monad.Writer
 
 
 data TcError attr c id
-    = TermScope                      (Term attr c id) (id TermLevel)
-    | TypeScope                      (Type attr c id) (id TypeLevel)
-    | NoTermConstant                 (Term attr c id) (c TermLevel)
-    | NoTypeConstant                 (Type attr c id) (c TypeLevel)
-    | NoUnifyFun (Term attr c id)    (Type attr c id) (Type attr c id)
-    | NoInstance (Term attr c id)    (Type attr c id) (Type attr c id)
-    | UnknownTypeOp (Type attr c id) (c TypeLevel)
-    | TypeOpArity (Type attr c id)   (c TypeLevel, Int) [Type attr c id]
+    = TermScope (Term attr c id) (id TermLevel)
+    | TypeScope (Type attr c id) (id TypeLevel)
+    
+    | NoTermConstant (Term attr c id) (c TermLevel)
+    | NoTypeConstant (Type attr c id) (c TypeLevel)
+    
+    | NoUnifyFun  (Term attr c id) (Type attr c id) (Type attr c id)
+    | NoInstance  (Term attr c id) (Type attr c id) (Type attr c id)
+    | TypeOpArity (Type attr c id) (c TypeLevel, Int) [Type attr c id]
 instance ( Show attr, Show (id TermLevel), Show (id TypeLevel), Show (c TermLevel), Show (c TypeLevel)
          , Show (Type attr c id) -- FIXME to have this, I need undecidable instances
          ) => Show (TcError attr c id) where
     show (TermScope e x) = concat ["Variable not in scope: ", show x]
     show (TypeScope t a) = concat ["Type variable not in scope: ", show a]
+    show (NoTypeConstant t c) = concat ["No such type operator ", show c]
     show (NoUnifyFun e t1 t2) = concat ["Could not call function of type ", show t1, " with argument type ", show t2]
     show (NoInstance e sigma t) = concat ["Could not instantiate ", show sigma, " at ", show t]
-    show (UnknownTypeOp t c) = concat ["Unknown type operator ", show c]
     show (TypeOpArity t (c, arity) ts) = concat ["Type operator ", show c, " expected ", show arity, " arguments , but got ", show $ length ts]
 type Tc attr c id a = ReaderT (Context attr c id Type (Paramd Int) Nada)
                       (Writer [TcError attr c id])
@@ -98,5 +99,5 @@ checkKind t0@(Ctor' c ts) = do
         Just (Paramd arity)
             | numArgs == arity -> pure $ Just ()
             | otherwise -> tell [TypeOpArity t0 (c, arity) ts] >> pure Nothing
-        Nothing -> tell [UnknownTypeOp t0 c] >> pure Nothing
+        Nothing -> tell [NoTypeConstant t0 c] >> pure Nothing
 checkKind (Forall' a t) = local (addType (a, Paramd 0)) $ checkKind t
