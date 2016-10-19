@@ -1,7 +1,6 @@
 {-#LANGUAGE FlexibleInstances, MultiParamTypeClasses, GADTs #-}
 module F.MessAround where
 
-
 import System.Environment
 import Data.String (IsString(..))
 import Data.List (intercalate, isSuffixOf)
@@ -9,21 +8,17 @@ import Data.List (intercalate, isSuffixOf)
 import Context
 import F.Parser
 import F.Syntax
-import F.Scope as Scope
-import F.Typecheck as Tc
+import F.Scope
+import F.Typecheck
+import F.Print
+import F.CodeGen.Lambda
 import qualified Lambda.Syntax as Lambda
 import qualified Lambda.Interpreter as Lambda
-import F.CodeGen.Lambda
-
-import F.Print
-import Lambda.Print
+import qualified Lambda.Print as Lambda
 
 import Text.Luthor
 import Text.Luthor.Syntax
 import Text.Parsec.Combinator (eof)
-
-import F.Unify
-
 
 
 main = do
@@ -55,28 +50,46 @@ compile source from =
         Left err -> Left $ show err
         Right e -> case typeCheck ctx0 e of
             Left errs -> Left $ intercalate "\n" (show <$> errs)
+            --Right t -> Right (e, (), t)
             Right t -> Right (e, codegen e, t)
     where
     parser = (expr <* eof)
 
 
-ctx0 :: Context () (C String) (Id StrId) Type (Paramd Int) Nada
+ctx0 :: Context () (C String) (Id StrId) Type Kind (Paramd Int)
 ctx0 = Ctx
     { gamma = mempty
-    , constants = mempty { typeConstants = flip lookup
-            [ (TypeC "->", Paramd 2)
-            , (TypeC "Int", Paramd 0)
+    , constants = mempty
+        { typeConstants = flip lookup
+            [ (TypeC "->", Arr () unitKind (Arr () unitKind unitKind) )
+            , (TypeC "Int", unitKind)
+            ]
+        , kindConstants = flip lookup
+            [ (KindC "->", Paramd 2)
+            , (KindC "*", Paramd 0)
             ]
         }
     }
+    where
+    unitKind = Ctor () (KindC "*") []
 
 
 
 
 
 instance ArrC attr (Type attr (C String) id) where
-    toArr attr a b = Ctor attr (TypeC "->") [a, b]
-    fromArr (Ctor attr (TypeC "->") [a, b]) = Just (attr, a, b)
+    toArr attr a b = App attr (App attr (Const attr (TypeC "->")) a) b
+    fromArr (App attr (App' (Const' (TypeC "->")) a) b) = Just (attr, a, b)
     fromArr _ = Nothing
+instance ArrC attr (Kind attr (C String) id) where
+    toArr attr a b = Ctor attr (KindC "->") [a, b]
+    fromArr (Ctor attr (KindC "->") [a, b]) = Just (attr, a, b)
+    fromArr _ = Nothing
+instance UnitC attr (Kind attr (C String) id) where
+    toUnit attr = (Ctor attr (KindC "*") [])
+    fromUnit (Ctor attr (KindC "*") []) = Just attr
+    fromUnit _ = Nothing
 instance IsString (C String TypeLevel) where
     fromString = TypeC
+instance IsString (C String KindLevel) where
+    fromString = KindC

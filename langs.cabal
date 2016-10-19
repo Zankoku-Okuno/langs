@@ -20,6 +20,7 @@ executable langs
   -- other-modules:       
   -- other-extensions:    
   build-depends:       base >=4.6,
+                       data-default,
                        luthor ==0.0.2,
                        mtl >=2,
                        parsec

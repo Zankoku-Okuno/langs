@@ -1,8 +1,6 @@
-{-#LANGUAGE LambdaCase, PatternSynonyms, ViewPatterns,
-            FlexibleInstances, FlexibleContexts,
-            MultiParamTypeClasses #-}
+{-#LANGUAGE PolyKinds, FlexibleInstances, MultiParamTypeClasses #-}
 module F.Syntax
-    ( Type, Term
+    ( Term, Type, Kind
     , module Signature
     , module Syntax
     ) where
@@ -11,33 +9,43 @@ import Signature
 import Syntax
 
 
+data Kind attr c (id :: * -> *)
+    = KCtor_ attr (c KindLevel) [Kind attr c id]
+
+instance CtorC attr (Kind attr c id) (c KindLevel) (Kind attr c id) where
+    toCtor = KCtor_
+    fromCtor (KCtor_ attr c ks) = Just (attr, c, ks)
+
 
 data Type attr c id
     = TVar_ attr (id TypeLevel)
-    | TCtor_ attr (c TypeLevel) [Type attr c id]
-    | Forall_ attr (id TypeLevel) (Type attr c id)
+    | TConst_ attr (c TypeLevel)
+    | TApp_ attr (Type attr c id) (Type attr c id)
+    | TForall_ attr (id TypeLevel, Kind attr c id) (Type attr c id)
 
 instance VarC attr (Type attr c id) (id TypeLevel) where
     toVar = TVar_
     fromVar (TVar_ attr a) = Just (attr, a)
     fromVar _ = Nothing
-instance CtorC attr (Type attr c id) (c TypeLevel) (Type attr c id) where
-    toCtor = TCtor_
-    fromCtor (TCtor_ attr c ts) = Just (attr, c, ts)
-    fromCtor _ = Nothing
-instance ForallC attr (Type attr c id) (id TypeLevel) where
-    toForall = Forall_
-    fromForall (Forall_ attr a sigma) = Just (attr, a, sigma)
+instance ConstC attr (Type attr c id) (c TypeLevel) where
+    toConst = TConst_
+    fromConst (TConst_ attr a) = Just (attr, a)
+    fromConst _ = Nothing
+instance AppC attr (Type attr c id) where
+    toApp = TApp_
+    fromApp (TApp_ attr t1 t2) = Just (attr, t1, t2)
+    fromApp _ = Nothing
+instance ForallC attr (Type attr c id) (id TypeLevel, Kind attr c id) where
+    toForall = TForall_
+    fromForall (TForall_ attr a t) = Just (attr, a, t)
     fromForall _ = Nothing
-
 
 instance MonotypeC (Type attr c id) (Type attr c id) where
     toMonotype t@(Var' _) = Just t
-    toMonotype t@(Ctor' c sigmas) = const t <$> mapM_ toMonotype sigmas
+    toMonotype t@(Const' _) = Just t
+    toMonotype t@(App' t1 t2) = const t <$> mapM_ toMonotype [t1, t2]
     toMonotype _ = Nothing
     fromMonotype = id
-
-
 
 
 data Term attr c id
@@ -45,7 +53,7 @@ data Term attr c id
     | Const_ attr (c TermLevel)
     | Abs_ attr (id TermLevel, Type attr c id) (Term attr c id)
     | App_ attr (Term attr c id) (Term attr c id)
-    | BigAbs_ attr (id TypeLevel) (Term attr c id)
+    | BigAbs_ attr (id TypeLevel, Kind attr c id) (Term attr c id)
     | BigApp_ attr (Term attr c id) (Type attr c id)
 
 instance VarC attr (Term attr c id) (id TermLevel) where
@@ -64,7 +72,7 @@ instance AppC attr (Term attr c id) where
     toApp = App_
     fromApp (App_ attr e1 e2) = Just (attr, e1, e2)
     fromApp _ = Nothing
-instance BigAbsC attr (Term attr c id) (id TypeLevel) where
+instance BigAbsC attr (Term attr c id) (id TypeLevel, Kind attr c id) where
     toBigAbs = BigAbs_
     fromBigAbs (BigAbs_ attr a e) = Just (attr, a, e)
     fromBigAbs _ = Nothing

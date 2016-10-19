@@ -1,9 +1,9 @@
 module F.CodeGen.Lambda where
 
-import F.Syntax as F
+import F.Syntax as FO
 import Lambda.Syntax as Lambda
 
-codegen :: F.Term attr c id -> Lambda.Term attr c id
+codegen :: FO.Term attr c id -> Lambda.Term attr c id
 codegen (Var attr x) = Var attr x
 codegen (Const attr c) = Const attr c
 codegen (Abs attr (x, _) e) = Abs attr x (codegen e)

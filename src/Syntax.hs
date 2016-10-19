@@ -5,13 +5,20 @@ module Syntax where
 
 ------ Common Constants ------
 
+class UnitC attr s | s -> attr where
+    toUnit :: attr -> s
+    fromUnit :: s -> Maybe attr
+pattern Unit :: (UnitC attr s) => attr -> s
+pattern Unit attr <- (fromUnit -> Just attr)
+    where Unit = toUnit
+pattern Unit' <- Unit _
+
 class ArrC attr s | s -> attr where
     toArr :: attr -> s -> s -> s
     fromArr :: s -> Maybe (attr, s, s)
 pattern Arr :: (ArrC attr s) => attr -> s -> s -> s
 pattern Arr attr a b <- (fromArr -> Just (attr, a, b))
-    where
-    Arr = toArr
+    where Arr = toArr
 pattern Arr' a b <- Arr _ a b
 
 

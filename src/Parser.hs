@@ -27,6 +27,8 @@ instance IsSourcePos SourcePos where
     fromSourcePos l _ = l
 instance IsSourcePos (SourcePos, SourcePos) where
     fromSourcePos l1 l2 = (l1, l2)
+instance IsSourcePos a => IsSourcePos (Maybe a) where
+    fromSourcePos l1 l2 = Just (fromSourcePos l1 l2)
 
 
 ws, ws0 :: Stream s m Char => ParsecT s a m ()
