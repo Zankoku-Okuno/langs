@@ -1,0 +1,19 @@
+ML
+elaborate ML to F
+MLF
+elaborate MLF to F
+Fomega
+type-erase system Fomega to untyped lambda
+MLFomega
+elaborate MLFomega to Fomega
+
+additional features:
+ * qualified types (in inferred systems)
+ * existential types (in inferred and manifest systems)
+ * scoped type variables (in inferred systems)
+ * pattern matching with GADTs
+ * (prenex) polymorphic kinds
+
+
+optional:
+A-normal form
